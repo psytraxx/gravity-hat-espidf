@@ -42,7 +42,7 @@ static uint32_t s_reconnect_ms = RECONNECT_MIN_MS;
 
 static bool wifi_enabled(void)
 {
-    return CONFIG_CUBE_WIFI_SSID[0] != '\0';
+    return CONFIG_HAT_WIFI_SSID[0] != '\0';
 }
 
 static void reconnect(void *arg)
@@ -66,7 +66,7 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *da
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         const ip_event_got_ip_t *event = data;
         ESP_LOGI(TAG, "Wi-Fi up: http://" IPSTR "/ or http://%s.local/", IP2STR(&event->ip_info.ip),
-                 CONFIG_CUBE_HOSTNAME);
+                 CONFIG_HAT_HOSTNAME);
         s_reconnect_ms = RECONNECT_MIN_MS;
         xEventGroupSetBits(s_events, GOT_IP);
     }
@@ -84,7 +84,7 @@ static void wifi_init(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_t *netif = esp_netif_create_default_wifi_sta();
-    ESP_ERROR_CHECK(esp_netif_set_hostname(netif, CONFIG_CUBE_HOSTNAME));
+    ESP_ERROR_CHECK(esp_netif_set_hostname(netif, CONFIG_HAT_HOSTNAME));
 
     const esp_timer_create_args_t timer = {.callback = reconnect, .name = "wifi_retry"};
     ESP_ERROR_CHECK(esp_timer_create(&timer, &s_reconnect_timer));
@@ -95,10 +95,10 @@ static void wifi_init(void)
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_wifi_event, NULL));
 
     wifi_config_t config = {0};
-    strlcpy((char *)config.sta.ssid, CONFIG_CUBE_WIFI_SSID, sizeof(config.sta.ssid));
-    strlcpy((char *)config.sta.password, CONFIG_CUBE_WIFI_PASSWORD, sizeof(config.sta.password));
+    strlcpy((char *)config.sta.ssid, CONFIG_HAT_WIFI_SSID, sizeof(config.sta.ssid));
+    strlcpy((char *)config.sta.password, CONFIG_HAT_WIFI_PASSWORD, sizeof(config.sta.password));
     config.sta.threshold.authmode =
-        CONFIG_CUBE_WIFI_PASSWORD[0] != '\0' ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
+        CONFIG_HAT_WIFI_PASSWORD[0] != '\0' ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
     /* Ignore WPA3 compatibility (RSN override) elements. Some routers, such as
      * the FRITZ!Box 4040, advertise an RSNXE override in the beacon but leave
      * it out of 4-way handshake message 3, which fails every join with reason
@@ -107,22 +107,22 @@ static void wifi_init(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
     ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_LOGI(TAG, "Joining Wi-Fi \"%s\"", CONFIG_CUBE_WIFI_SSID);
+    ESP_LOGI(TAG, "Joining Wi-Fi \"%s\"", CONFIG_HAT_WIFI_SSID);
 }
 
-static void mdns_init_cube(void)
+static void mdns_init_hat(void)
 {
     ESP_ERROR_CHECK(mdns_init());
-    ESP_ERROR_CHECK(mdns_hostname_set(CONFIG_CUBE_HOSTNAME));
-    ESP_ERROR_CHECK(mdns_instance_name_set("Gravity cube"));
+    ESP_ERROR_CHECK(mdns_hostname_set(CONFIG_HAT_HOSTNAME));
+    ESP_ERROR_CHECK(mdns_instance_name_set("Gravity hat"));
     ESP_ERROR_CHECK(mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0));
 }
 
 /* With a token set, requests need "Authorization: Bearer <token>". */
 static bool authorized(httpd_req_t *req)
 {
-    static const char expected[] = "Bearer " CONFIG_CUBE_OTA_TOKEN;
-    if (CONFIG_CUBE_OTA_TOKEN[0] == '\0') {
+    static const char expected[] = "Bearer " CONFIG_HAT_OTA_TOKEN;
+    if (CONFIG_HAT_OTA_TOKEN[0] == '\0') {
         return true;
     }
     char header[sizeof(expected) + 1];
@@ -139,7 +139,7 @@ static esp_err_t get_status(httpd_req_t *req)
     return httpd_resp_sendstr(req, body);
 }
 
-/* The body is the app image, build/gravity-cube.bin. */
+/* The body is the app image, build/gravity-hat.bin. */
 static esp_err_t post_ota(httpd_req_t *req)
 {
     if (!authorized(req)) {
@@ -233,7 +233,7 @@ static void net_task(void *arg)
 {
     if (wifi_enabled()) {
         wifi_init();
-        mdns_init_cube();
+        mdns_init_hat();
         server_start();
     } else {
         ESP_LOGW(TAG, "No Wi-Fi SSID set: no updates over Wi-Fi");

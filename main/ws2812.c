@@ -8,9 +8,9 @@
 
 static const char *TAG = "ws2812";
 
-/* Rounds up to six of the ESP32-S3's eight 48-symbol RMT blocks: the
- * driver refills one half while the other goes out, so the refill
- * interrupt has ~180 us of slack instead of ~30. */
+/* Four of the ESP32's eight 64-symbol RMT blocks: the driver refills one
+ * half while the other goes out, so the refill interrupt has ~160 us of
+ * slack instead of ~40. */
 #define RMT_MEM_SYMBOLS 256
 
 static led_strip_handle_t s_strip;

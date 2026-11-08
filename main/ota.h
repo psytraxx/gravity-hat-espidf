@@ -2,7 +2,7 @@
 
 /* Firmware updates over Wi-Fi.
  *
- * The cube joins the Wi-Fi network set in menuconfig, announces itself
+ * The hat joins the Wi-Fi network set in menuconfig, announces itself
  * over mDNS and takes a new image as an HTTP POST to /ota, which it writes
  * to the other app slot and boots. All of it runs on core 1.
  *

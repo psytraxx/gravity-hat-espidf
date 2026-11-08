@@ -1,15 +1,17 @@
 #include "fluid.h"
 
+#include <math.h>
 #include <string.h>
 
-#define N CUBE_SIZE
+#define NX FLUID_NX
+#define NY FLUID_NY
+#define NZ FLUID_NZ
 
-/* Gravity in cells per step squared: at an 18 ms step, 1 g for 2.3 cm
- * voxels (9.81 m/s^2 * 0.018^2 s^2 / 0.023 m), so the fluid moves a
- * little slower than it would at the cube's real size. */
-#define GRAVITY 0.14f
+/* Centre of the hat's round wall, across the grid. */
+#define AXIS_X (NX / 2.0f)
+#define AXIS_Y (NY / 2.0f)
 
-/* Multiplier on the cube's rotation forces (Euler, Coriolis, centrifugal).
+/* Multiplier on the hat's rotation forces (Euler, Coriolis, centrifugal).
  * 1.0 is the real thing. */
 #define ROTATION_GAIN 1.0f
 
@@ -20,8 +22,9 @@
 /* Pushing-apart passes per step. */
 #define SEPARATION_PASSES 1
 
-/* Gauss-Seidel passes of the pressure solve, and its over-relaxation. */
-#define PRESSURE_ITERATIONS 30
+/* Gauss-Seidel passes of the pressure solve, and its over-relaxation. The
+ * hat's 14-cell column needs 50 passes to settle still. */
+#define PRESSURE_ITERATIONS 60
 #define OVER_RELAXATION     1.9f
 
 /* How strongly cells packed above the rest density push particles out
@@ -32,14 +35,25 @@
  * the velocity particles take back: lower is calmer and more viscous. */
 #define FLIP_RATIO 0.8f
 
-/* A dark voxel lights once the particle density at its centre reaches
- * LIGHT_ON and goes dark again below LIGHT_OFF (rest density is
- * FLUID_PARTICLES_PER_CELL), so particles hovering at a cell boundary do
- * not flicker. */
-#define LIGHT_ON  1.2f
-#define LIGHT_OFF 0.4f
-
 #define NONE UINT16_MAX
+
+/* A cell's flags in fluid_t.open: whether it lies in the hat, and which
+ * of its faces are open, with cells in the hat on both sides. Closed
+ * faces are the hat's walls. */
+#define OPEN_IN 0x40
+
+/* A face, in fluid_t.face: between two cells of the hat, a wall (one cell
+ * of the hat), or outside it (none). Faces beyond the grid's last cell,
+ * past the end of an axis shorter than FLUID_FACES, stay FACE_OUTSIDE. */
+#define FACE_OUTSIDE 0
+#define FACE_WALL    1
+#define FACE_OPEN    2
+#define OPEN_X0      0x01
+#define OPEN_X1      0x02
+#define OPEN_Y0      0x04
+#define OPEN_Y1      0x08
+#define OPEN_Z0      0x10
+#define OPEN_Z1      0x20
 
 /* The 13 neighbouring cells "after" a cell (in z, then y, then x order).
  * Checking a cell against itself and these visits every pair of adjacent
@@ -71,21 +85,21 @@ static inline void set_axis(vec3_t *v, int a, float value)
 
 static inline int cell_index(int x, int y, int z)
 {
-    return x + N * (y + N * z);
+    return x + NX * (y + NY * z);
 }
 
-/* Face (i, j, k) of the faces carrying component a: index i, j or k runs
- * to N along axis a, to N - 1 along the others. */
+/* Face (i, j, k) of the faces carrying component a: the index along axis
+ * a runs to the grid size, the others to one less. */
 static inline int face_index(int a, int i, int j, int k)
 {
-    const int nx = N + (a == 0), ny = N + (a == 1);
+    const int nx = NX + (a == 0), ny = NY + (a == 1);
     return i + nx * (j + ny * k);
 }
 
-static inline int cell_of(float v)
+static inline int cell_of(float v, int n)
 {
     const int c = (int)v;
-    return c < 0 ? 0 : c >= N ? N - 1 : c;
+    return c < 0 ? 0 : c >= n ? n - 1 : c;
 }
 
 /* Trilinear weights of a point over the 8 nearest samples of a grid whose
@@ -127,34 +141,67 @@ static void stencil(vec3_t pos, const float offset[3], const int size[3], stenci
 static void face_stencil(int a, vec3_t pos, stencil_t *s)
 {
     const float offset[3] = {a == 0 ? 0.0f : 0.5f, a == 1 ? 0.0f : 0.5f, a == 2 ? 0.0f : 0.5f};
-    const int size[3] = {N + (a == 0), N + (a == 1), N + (a == 2)};
+    const int size[3] = {NX + (a == 0), NY + (a == 1), NZ + (a == 2)};
     stencil(pos, offset, size, s);
 }
 
 static void cell_stencil(vec3_t pos, stencil_t *s)
 {
     static const float offset[3] = {0.5f, 0.5f, 0.5f};
-    static const int size[3] = {N, N, N};
+    static const int size[3] = {NX, NY, NZ};
     stencil(pos, offset, size, s);
 }
 
-/* Keep a particle off the walls; a wall stops motion into it. */
-static void collide_walls(particle_t *p)
+/* Push a particle back from a closed face along one axis: `lo` and `hi`
+ * are its cell's faces, `open_lo` and `open_hi` whether they are open. */
+static void collide_axis(float *pos, float *vel, float lo, float hi, bool open_lo, bool open_hi)
 {
-    for (int a = 0; a < 3; a++) {
-        const float v = axis(p->pos, a);
-        if (v < PARTICLE_RADIUS) {
-            set_axis(&p->pos, a, PARTICLE_RADIUS);
-            if (axis(p->vel, a) < 0.0f) {
-                set_axis(&p->vel, a, 0.0f);
-            }
-        } else if (v > N - PARTICLE_RADIUS) {
-            set_axis(&p->pos, a, N - PARTICLE_RADIUS);
-            if (axis(p->vel, a) > 0.0f) {
-                set_axis(&p->vel, a, 0.0f);
-            }
+    if (!open_lo && *pos < lo + PARTICLE_RADIUS) {
+        *pos = lo + PARTICLE_RADIUS;
+        if (*vel < 0.0f) {
+            *vel = 0.0f;
+        }
+    } else if (!open_hi && *pos > hi - PARTICLE_RADIUS) {
+        *pos = hi - PARTICLE_RADIUS;
+        if (*vel > 0.0f) {
+            *vel = 0.0f;
         }
     }
+}
+
+/* Keep a particle off the hat's walls, which are the closed faces of its
+ * cells; a wall stops motion into it. A particle that cut a corner into a
+ * cell outside the hat first goes back into the nearest cell of the hat
+ * beside, above or below it, a step towards the hat's middle along one
+ * axis or two. */
+static void collide_walls(const fluid_t *f, particle_t *p)
+{
+    int i = cell_of(p->pos.x, NX), j = cell_of(p->pos.y, NY), k = cell_of(p->pos.z, NZ);
+    if (!(f->open[cell_index(i, j, k)] & OPEN_IN)) {
+        static const int8_t STEPS[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1},
+                                           {1, 1, 0}, {1, 0, 1}, {0, 1, 1}};
+        const int di = p->pos.x < AXIS_X ? 1 : -1;
+        const int dj = p->pos.y < AXIS_Y ? 1 : -1;
+        const int dk = p->pos.z < HAT_HEIGHT / 2.0f ? 1 : -1;
+        for (int n = 0; n < 6; n++) {
+            const int ti = i + STEPS[n][0] * di, tj = j + STEPS[n][1] * dj;
+            const int tk = k + STEPS[n][2] * dk;
+            if (ti >= 0 && ti < NX && tj >= 0 && tj < NY && tk >= 0 && tk < NZ &&
+                (f->open[cell_index(ti, tj, tk)] & OPEN_IN)) {
+                i = ti;
+                j = tj;
+                k = tk;
+                break;
+            }
+        }
+        p->pos.x = clampf(p->pos.x, (float)i, (float)i + 1.0f);
+        p->pos.y = clampf(p->pos.y, (float)j, (float)j + 1.0f);
+        p->pos.z = clampf(p->pos.z, (float)k, (float)k + 1.0f);
+    }
+    const uint8_t open = f->open[cell_index(i, j, k)];
+    collide_axis(&p->pos.x, &p->vel.x, (float)i, (float)i + 1.0f, open & OPEN_X0, open & OPEN_X1);
+    collide_axis(&p->pos.y, &p->vel.y, (float)j, (float)j + 1.0f, open & OPEN_Y0, open & OPEN_Y1);
+    collide_axis(&p->pos.z, &p->vel.z, (float)k, (float)k + 1.0f, open & OPEN_Z0, open & OPEN_Z1);
 }
 
 /* Fast 1/sqrt(x) for x > 0: a bit-level estimate refined by two Newton
@@ -199,7 +246,7 @@ static void bin_particles(fluid_t *f)
     }
     for (int i = 0; i < f->n; i++) {
         const vec3_t pos = f->p[i].pos;
-        const int cell = cell_index(cell_of(pos.x), cell_of(pos.y), cell_of(pos.z));
+        const int cell = cell_index(cell_of(pos.x, NX), cell_of(pos.y, NY), cell_of(pos.z, NZ));
         f->next[i] = f->head[cell];
         f->head[cell] = (uint16_t)i;
         f->count[cell]++;
@@ -212,9 +259,9 @@ static void bin_particles(fluid_t *f)
 static void push_apart(fluid_t *f)
 {
     bin_particles(f);
-    for (int cz = 0; cz < N; cz++) {
-        for (int cy = 0; cy < N; cy++) {
-            for (int cx = 0; cx < N; cx++) {
+    for (int cz = 0; cz < NZ; cz++) {
+        for (int cy = 0; cy < NY; cy++) {
+            for (int cx = 0; cx < NX; cx++) {
                 const int cell = cell_index(cx, cy, cz);
                 if (f->head[cell] == NONE) {
                     continue;
@@ -225,7 +272,7 @@ static void push_apart(fluid_t *f)
                     const int nx = cx + FORWARD_NEIGHBORS[k][0];
                     const int ny = cy + FORWARD_NEIGHBORS[k][1];
                     const int nz = cz + FORWARD_NEIGHBORS[k][2];
-                    if (nx >= 0 && nx < N && ny >= 0 && ny < N && nz < N) {
+                    if (nx >= 0 && nx < NX && ny >= 0 && ny < NY && nz < NZ) {
                         const int neighbor = cell_index(nx, ny, nz);
                         if (f->head[neighbor] != NONE) {
                             neighbors[count++] = neighbor;
@@ -246,12 +293,13 @@ static void push_apart(fluid_t *f)
         }
     }
     for (int i = 0; i < f->n; i++) {
-        collide_walls(&f->p[i]);
+        collide_walls(f, &f->p[i]);
     }
 }
 
-/* Spread particle velocities onto the faces. Faces on the walls carry no
- * flow. */
+/* Spread particle velocities onto the faces. Walls carry no flow, and
+ * faces with no cell of the hat on either side take no part, just as if
+ * they lay beyond the grid. */
 static void particles_to_grid(fluid_t *f)
 {
     memset(f->vel, 0, sizeof f->vel);
@@ -275,27 +323,30 @@ static void particles_to_grid(fluid_t *f)
             }
         }
     }
-    for (int j = 0; j < N; j++) {
-        for (int k = 0; k < N; k++) {
-            f->vel[0][face_index(0, 0, j, k)] = f->vel[0][face_index(0, N, j, k)] = 0.0f;
-            f->vel[1][face_index(1, j, 0, k)] = f->vel[1][face_index(1, j, N, k)] = 0.0f;
-            f->vel[2][face_index(2, j, k, 0)] = f->vel[2][face_index(2, j, k, N)] = 0.0f;
+    for (int a = 0; a < 3; a++) {
+        for (int i = 0; i < FLUID_FACES; i++) {
+            if (f->face[a][i] != FACE_OPEN) {
+                f->vel[a][i] = 0.0f;
+            }
+            if (f->face[a][i] == FACE_OUTSIDE) {
+                f->weight[a][i] = 0.0f;
+            }
         }
     }
     memcpy(f->prev, f->vel, sizeof f->prev);
 }
 
 /* Make the flow out of every fluid cell zero (Gauss-Seidel with
- * over-relaxation), against closed walls and an open surface. Cells packed
+ * over-relaxation), against closed faces and an open surface. Cells packed
  * above the rest density get a little outflow, which spreads them out
  * again. */
 static void solve_pressure(fluid_t *f)
 {
     const float rest = (float)FLUID_PARTICLES_PER_CELL;
     for (int it = 0; it < PRESSURE_ITERATIONS; it++) {
-        for (int k = 0; k < N; k++) {
-            for (int j = 0; j < N; j++) {
-                for (int i = 0; i < N; i++) {
+        for (int k = 0; k < NZ; k++) {
+            for (int j = 0; j < NY; j++) {
+                for (int i = 0; i < NX; i++) {
                     const int cell = cell_index(i, j, k);
                     if (f->count[cell] == 0) {
                         continue;
@@ -303,9 +354,10 @@ static void solve_pressure(fluid_t *f)
                     const int x0 = face_index(0, i, j, k), x1 = face_index(0, i + 1, j, k);
                     const int y0 = face_index(1, i, j, k), y1 = face_index(1, i, j + 1, k);
                     const int z0 = face_index(2, i, j, k), z1 = face_index(2, i, j, k + 1);
-                    const float sx0 = i > 0, sx1 = i < N - 1;
-                    const float sy0 = j > 0, sy1 = j < N - 1;
-                    const float sz0 = k > 0, sz1 = k < N - 1;
+                    const uint8_t faces = f->open[cell];
+                    const float sx0 = (faces & OPEN_X0) != 0, sx1 = (faces & OPEN_X1) != 0;
+                    const float sy0 = (faces & OPEN_Y0) != 0, sy1 = (faces & OPEN_Y1) != 0;
+                    const float sz0 = (faces & OPEN_Z0) != 0, sz1 = (faces & OPEN_Z1) != 0;
                     const int open = (int)(sx0 + sx1 + sy0 + sy1 + sz0 + sz1);
                     float div = f->vel[0][x1] - f->vel[0][x0] + f->vel[1][y1] - f->vel[1][y0] +
                                 f->vel[2][z1] - f->vel[2][z0];
@@ -354,9 +406,9 @@ static void grid_to_particles(fluid_t *f)
     }
 }
 
-/* Particle density and tint at the cell centres, and which voxels the
- * density lights. The pressure solve of the next step uses the same
- * density: particles do not move in between. */
+/* Particle density and tint at the cell centres. The pressure solve of
+ * the next step uses the same density: particles do not move in
+ * between. */
 static void update_density(fluid_t *f)
 {
     memset(f->density, 0, sizeof f->density);
@@ -372,46 +424,89 @@ static void update_density(fluid_t *f)
         }
     }
     for (int i = 0; i < FLUID_CELLS; i++) {
-        f->lit[i] = f->density[i] >= (f->lit[i] ? LIGHT_OFF : LIGHT_ON);
         if (f->density[i] > 0.0f) {
             f->tint[i] /= f->density[i];
         }
     }
 }
 
+/* Whether cell (i, j, k) lies in the hat: its centre inside the hat's
+ * radius at its height, and below HAT_HEIGHT. */
+static bool inside(int i, int j, int k)
+{
+    if (i < 0 || i >= NX || j < 0 || j >= NY || k < 0 || k >= NZ) {
+        return false;
+    }
+    const float dx = (float)i + 0.5f - AXIS_X, dy = (float)j + 0.5f - AXIS_Y;
+    const float z = (float)k + 0.5f, r = hat_radius_at(z);
+    return dx * dx + dy * dy < r * r && z < HAT_HEIGHT;
+}
+
 void fluid_init(fluid_t *f)
 {
     memset(f, 0, sizeof *f);
+    for (int a = 0; a < 3; a++) {
+        const int di = a == 0, dj = a == 1, dk = a == 2;
+        for (int k = 0; k < NZ + dk; k++) {
+            for (int j = 0; j < NY + dj; j++) {
+                for (int i = 0; i < NX + di; i++) {
+                    const int in = inside(i, j, k) + inside(i - di, j - dj, k - dk);
+                    f->face[a][face_index(a, i, j, k)] = in == 2   ? FACE_OPEN
+                                                         : in == 1 ? FACE_WALL
+                                                                   : FACE_OUTSIDE;
+                }
+            }
+        }
+    }
+    for (int k = 0; k < NZ; k++) {
+        for (int j = 0; j < NY; j++) {
+            for (int i = 0; i < NX; i++) {
+                if (!inside(i, j, k)) {
+                    continue;
+                }
+                f->open[cell_index(i, j, k)] =
+                    (uint8_t)(OPEN_IN | (inside(i - 1, j, k) ? OPEN_X0 : 0) |
+                              (inside(i + 1, j, k) ? OPEN_X1 : 0) |
+                              (inside(i, j - 1, k) ? OPEN_Y0 : 0) |
+                              (inside(i, j + 1, k) ? OPEN_Y1 : 0) |
+                              (inside(i, j, k - 1) ? OPEN_Z0 : 0) |
+                              (inside(i, j, k + 1) ? OPEN_Z1 : 0));
+            }
+        }
+    }
 }
 
-void fluid_populate(fluid_t *f, int n)
+void fluid_populate(fluid_t *f)
 {
-    /* Two particles per voxel, on opposite corners of a smaller cube in
+    /* Two particles per cell, on opposite corners of a smaller cube in
      * it: evenly spread and clear of the walls. */
     static const float OFFSETS[2] = {0.3f, 0.7f};
-    if (n > FLUID_PARTICLES) {
-        n = FLUID_PARTICLES;
-    }
+    const int layers = (int)lrintf(HAT_HEIGHT / 2.0f);
     f->n = 0;
-    for (int z = 0; z < N && f->n < n; z++) {
-        for (int y = 0; y < N && f->n < n; y++) {
-            for (int x = 0; x < N && f->n < n; x++) {
-                for (int k = 0; k < FLUID_PARTICLES_PER_CELL && f->n < n; k++) {
+    for (int z = 0; z < layers; z++) {
+        for (int y = 0; y < NY; y++) {
+            for (int x = 0; x < NX; x++) {
+                if (!(f->open[cell_index(x, y, z)] & OPEN_IN)) {
+                    continue;
+                }
+                for (int k = 0; k < FLUID_PARTICLES_PER_CELL && f->n < FLUID_PARTICLES; k++) {
                     const float o = OFFSETS[k % 2];
                     const vec3_t pos = v3((float)x + o, (float)y + o, (float)z + o);
-                    /* 0 in one bottom corner to 1 at the far top edge of a
-                     * half-full cube. */
-                    const float diagonal = (pos.x + pos.y + pos.z) / (2.5f * N);
+                    /* Shades run across the hat and up it: from -1 on the
+                     * -x side at the floor to +1 on the +x side at the
+                     * half-full level. */
+                    const float across = (pos.x - AXIS_X) / HAT_RADIUS_MAX;
+                    const float up = pos.z / (0.5f * HAT_HEIGHT);
+                    const float t = clampf(0.5f * (across + up), -1.0f, 1.0f);
                     f->p[f->n++] = (particle_t){
                         .pos = pos,
                         .vel = v3(0.0f, 0.0f, 0.0f),
-                        .tint = FLUID_TINT_SPREAD * (2.0f * diagonal - 1.0f),
+                        .tint = FLUID_TINT_SPREAD * t,
                     };
                 }
             }
         }
     }
-    memset(f->lit, 0, sizeof f->lit);
     update_density(f);
 }
 
@@ -422,9 +517,9 @@ void fluid_set_rotation(fluid_t *f, vec3_t rotation)
 
 void fluid_step(fluid_t *f, vec3_t accel)
 {
-    const vec3_t gravity = v3_scale(accel, GRAVITY);
-    const vec3_t center = v3(N / 2.0f, N / 2.0f, N / 2.0f);
-    /* In the turning cube the fluid feels the Euler force (the spin
+    const vec3_t gravity = v3_scale(accel, FLUID_GRAVITY);
+    const vec3_t center = v3(AXIS_X, AXIS_Y, HAT_HEIGHT / 2.0f);
+    /* In the turning hat the fluid feels the Euler force (the spin
      * speeding up), Coriolis and centrifugal forces. */
     const vec3_t spin = v3_scale(f->rotation, ROTATION_GAIN);
     const vec3_t spin_up = v3_sub(spin, v3_scale(f->last_rotation, ROTATION_GAIN));
@@ -453,7 +548,7 @@ void fluid_step(fluid_t *f, vec3_t accel)
         p->vel.y = clampf(p->vel.y, -FLUID_MAX_VELOCITY, FLUID_MAX_VELOCITY);
         p->vel.z = clampf(p->vel.z, -FLUID_MAX_VELOCITY, FLUID_MAX_VELOCITY);
         p->pos = v3_add(p->pos, p->vel);
-        collide_walls(p);
+        collide_walls(f, p);
     }
     for (int pass = 0; pass < SEPARATION_PASSES; pass++) {
         push_apart(f);
@@ -461,12 +556,18 @@ void fluid_step(fluid_t *f, vec3_t accel)
     update_density(f);
 }
 
-bool fluid_lit(const fluid_t *f, cell_t c)
+float fluid_sample(const fluid_t *f, vec3_t pos, float *tint)
 {
-    return f->lit[cell_index(c.x, c.y, c.z)];
-}
-
-float fluid_tint(const fluid_t *f, cell_t c)
-{
-    return f->tint[cell_index(c.x, c.y, c.z)];
+    stencil_t s;
+    cell_stencil(pos, &s);
+    float density = 0.0f, tinted = 0.0f;
+    for (int c = 0; c < 8; c++) {
+        const float d = s.w[c] * f->density[s.idx[c]];
+        density += d;
+        tinted += d * f->tint[s.idx[c]];
+    }
+    if (tint) {
+        *tint = density > 0.0f ? tinted / density : 0.0f;
+    }
+    return density;
 }

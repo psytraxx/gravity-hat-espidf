@@ -4,7 +4,7 @@
 #   cmake -S test/host -B build-host && cmake --build build-host
 #   ctest --test-dir build-host --output-on-failure
 cmake_minimum_required(VERSION 3.22)
-project(gravity_cube_host_tests C)
+project(gravity_can_host_tests C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)

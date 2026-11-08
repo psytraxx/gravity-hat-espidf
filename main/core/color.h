@@ -9,3 +9,6 @@
  * between two channels whose sum is always FLUID_LEVEL: every hue draws
  * the current of one channel at FLUID_LEVEL. */
 color_t color_from_hue(uint32_t hue);
+
+/* `c` at `brightness` (0 to 1) of its level, rounded. */
+color_t color_scale(color_t c, float brightness);

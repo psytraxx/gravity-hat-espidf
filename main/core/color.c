@@ -15,3 +15,10 @@ color_t color_from_hue(uint32_t hue)
         return (color_t){b, 0, a};
     }
 }
+
+color_t color_scale(color_t c, float brightness)
+{
+    const float k = brightness < 0.0f ? 0.0f : brightness > 1.0f ? 1.0f : brightness;
+    return (color_t){(uint8_t)(c.r * k + 0.5f), (uint8_t)(c.g * k + 0.5f),
+                     (uint8_t)(c.b * k + 0.5f)};
+}

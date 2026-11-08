@@ -1,139 +1,154 @@
-menu "Gravity cube"
+menu "Gravity hat"
 
-config CUBE_LED_GPIO
+config HAT_LED_GPIO
     int "LED data GPIO"
-    default 2
+    default 13
     help
-        Data line of the WS2812 chain, through a 330 ohm series
-        resistor. GPIO 2 is on the ESP32-S3 SuperMini's header and is
-        not a strapping pin on the ESP32-S3.
+        Data line of the WS2812B strip, through a 330 ohm series
+        resistor. GPIO 13 is not a strapping pin, and sits next to GND
+        and near 5V on the board's header.
 
-choice CUBE_PANEL_WIRING
-    prompt "Panel wiring"
-    default CUBE_PANEL_WIRING_ROWS
-    help
-        How the chain runs through each panel, starting from IN at the
-        bottom of the edge a side panel shares with the previous one.
-
-config CUBE_PANEL_WIRING_ROWS
-    bool "Rows"
-    help
-        Along the bottom row, then each row above it from the same side,
-        to OUT at the top of the edge with the next panel.
-
-config CUBE_PANEL_WIRING_ZIGZAG
-    bool "Zigzag columns"
-    help
-        Up the first column, down the next and so on, to OUT at the
-        bottom of the edge with the next panel.
-
-endchoice
-
-config CUBE_FRAME_MS
+config HAT_FRAME_MS
     int "Physics step period (ms)"
     default 18
     range 5 100
     help
         One physics step per period. The physics constants are per step,
-        so a longer period slows the fluid down. A fluid step takes about
-        17 ms on the ESP32-S3, so 18 ms (55 steps a second) is the
-        shortest period it keeps up with; the LED chain needs ~11.5 ms.
+        so a longer period slows the fluid down. The strip needs about
+        15 ms per frame, and a fluid step about as long; the status log
+        shows both. Raise the period if the physics runs over it.
 
-config CUBE_PANEL_TEST
-    bool "Panel test at power on"
-    default y
-    help
-        Before the fluid starts, fill each panel green LED by LED, from
-        the bottom left row by row to the top right, in chain order (Left,
-        Back, Right, Front, Bottom, Top): about 0.8 seconds a panel. A dead
-        LED or panel, or a broken link in the chain, shows up straight
-        away: every panel after a break stays dark.
-
-config CUBE_ASSEMBLY_PATTERN
-    bool "Assembly pattern instead of the fluid"
+config HAT_CALIBRATION
+    bool "Calibration picture instead of the fluid"
     default n
     help
-        For putting the panels into the case: after the panel test, show
-        a still pattern instead of the fluid. Each panel shows its own
-        colour in its centre (Left red, Back green, Right blue, Front
-        yellow, Bottom magenta, Top white) and, along each edge, the
-        colour of the panel across that edge; corners stay dark. Every
-        edge strip should match the centre of the panel beside it. A
-        wrong centre colour means a panel in the wrong place, edge
-        colours on the wrong sides a panel turned or flipped.
+        For setting up the strip's geometry and the IMU: show a
+        calibration picture instead of the fluid. Four coloured lines
+        run up the hat, one LED per turn each: red at LED 0's angle,
+        then green, blue and yellow a quarter turn apart. They
+        stand straight if the LEDs per turn in main/core/config.h are
+        right, and run red, green, blue, yellow counter-clockwise seen
+        from above if the winding direction is. Tilt the hat and a white
+        band lights the low side, where the fluid would run: if it lights
+        the wrong side, set the IMU rotation (below).
 
-config CUBE_TAP_THRESHOLD_MG
+config HAT_TAP_THRESHOLD_MG
     int "Tap threshold (mg)"
     default 1000
-    range 125 3875
+    range 300 4000
     help
-        Jump in acceleration that the BMI160's tap engine counts as a tap,
-        in steps of 125 mg. Raise it if sloshing the fluid changes its
-        colour, lower it if double taps are missed.
+        Jump in acceleration between two samples (4 ms apart) that counts
+        as a tap. Raise it if sloshing the fluid changes its colour, lower
+        it if double taps are missed.
 
-config CUBE_IMU_SPI_MOSI
-    int "SPI MOSI GPIO (board SDA)"
-    default 11
+config HAT_IMU_SPI_MOSI
+    int "SPI MOSI GPIO (board SDA/SDI)"
+    default 23
 
-config CUBE_IMU_SPI_MISO
-    int "SPI MISO GPIO (board SA0)"
-    default 13
+config HAT_IMU_SPI_MISO
+    int "SPI MISO GPIO (board AD0/SDO)"
+    default 19
 
-config CUBE_IMU_SPI_SCLK
+config HAT_IMU_SPI_SCLK
     int "SPI SCLK GPIO (board SCL)"
-    default 12
+    default 18
 
-config CUBE_IMU_SPI_CS
-    int "SPI CS GPIO (board CS)"
-    default 10
+config HAT_IMU_SPI_CS
+    int "SPI CS GPIO (board NCS)"
+    default 5
 
-config CUBE_IMU_INT1
-    int "IMU INT1 GPIO (board INT1)"
-    default 9
+config HAT_IMU_YAW_DEG
+    int "IMU rotation (degrees)"
+    default 90
+    range 0 359
     help
-        The BMI160 drives INT1 high on a double tap and holds it there
-        until the firmware has read it. GPIO 9 is on the SuperMini's
-        header and is not a strapping pin.
+        Where LED 0's side of the hat lies as the IMU board sees it: in
+        degrees counter-clockwise (seen from above) from the board's X
+        arrow. The firmware turns every reading back by as much. To find
+        it, turn on the calibration picture with this at 0 and tip the
+        hat so that LED 0's side (the red line) is lowest. The white band
+        then lights the side the setting points at: on the green line it
+        is 90, on the blue 180, on the yellow 270. The monitor logs it
+        exactly as "low side at N deg" (add 360 if N is negative).
 
-config CUBE_IMU_I2C_SCAN
+config HAT_IMU_I2C_SCAN
     bool "Scan for I2C devices on the IMU pins at startup"
     default n
     help
-        Wiring check: before setting up SPI, hold CS high (which keeps the
-        BMI160 on I2C) and probe every address with SCL on the SCLK pin
-        and SDA on the MOSI pin. A BMI160 answers at 0x68 (SA0 low) or
-        0x69 (SA0 high). The SPI setup switches the chip to SPI until it
-        is power cycled, so the scan only finds it after a power on, not
-        after a reset.
+        Wiring check: before setting up SPI, hold NCS high (which puts the
+        MPU-6500 on I2C) and probe every address with SCL on the SCLK pin
+        and SDA on the MOSI pin. An MPU-6500 answers at 0x68 (AD0 low) or
+        0x69 (AD0 high). The SPI setup turns the chip's I2C interface off
+        until it is power cycled, so the scan only finds it after a power
+        on, not after a reset.
+
+menu "Microphone"
+
+config HAT_MIC
+    bool "Pulse the brightness with the sound"
+    default y
+    help
+        Read an I2S microphone (INMP441 or alike) and pulse the fluid's
+        brightness with the sound: dim in the quiet, full on a loud
+        sound, fading after it. The firmware follows both the quiet and
+        the loud parts, so beats pulse in a quiet room and over loud
+        music alike. Without a microphone sending, the fluid stays at
+        full brightness.
+
+config HAT_MIC_SD
+    int "Microphone SD (data) GPIO"
+    depends on HAT_MIC
+    default 32
+
+config HAT_MIC_SCK
+    int "Microphone SCK (bit clock) GPIO"
+    depends on HAT_MIC
+    default 33
+
+config HAT_MIC_WS
+    int "Microphone WS (word select) GPIO"
+    depends on HAT_MIC
+    default 25
+
+config HAT_MIC_MIN_BRIGHTNESS
+    int "Brightness in the quiet (%)"
+    depends on HAT_MIC
+    default 25
+    range 0 100
+    help
+        The fluid's brightness while it is quiet, as a share of full.
+        Loud sounds pulse it up to full.
+
+endmenu
 
 menu "Wi-Fi and firmware updates"
 
-config CUBE_WIFI_SSID
+config HAT_WIFI_SSID
     string "Wi-Fi SSID"
     default ""
     help
         Network to join for firmware updates over Wi-Fi. Empty turns Wi-Fi
         off, and with it updates over Wi-Fi.
 
-config CUBE_WIFI_PASSWORD
+config HAT_WIFI_PASSWORD
     string "Wi-Fi password"
     default ""
     help
         Empty for an open network.
 
-config CUBE_HOSTNAME
+config HAT_HOSTNAME
     string "Hostname"
-    default "cube"
+    default "hat"
     help
-        DHCP and mDNS name: the cube answers at http://<hostname>.local/.
+        DHCP and mDNS name: the hat answers at http://<hostname>.local/.
 
-config CUBE_OTA_TOKEN
+config HAT_OTA_TOKEN
     string "Update token"
     default ""
     help
         If set, an update must carry the header
         "Authorization: Bearer <token>". Empty lets anyone on the network
-        update the cube.
+        update the hat.
 
 endmenu
 

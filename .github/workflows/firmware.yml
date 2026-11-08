@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
-    branches: [main]
+    branches: [main, cylinder]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,16 +27,16 @@ jobs:
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v6.1
-          target: esp32s3
+          target: esp32
           command: idf.py build
 
       - name: Upload firmware
         uses: actions/upload-artifact@v7
         with:
-          name: gravity-cube
+          name: gravity-hat
           path: |
             build/bootloader/bootloader.bin
             build/partition_table/partition-table.bin
-            build/gravity-cube.bin
+            build/gravity-hat.bin
             build/flash_args
           if-no-files-found: error

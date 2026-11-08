@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 680" width="1180" height="680" font-family="Helvetica, Arial, sans-serif" font-size="13">
-  <title>Gravity cube wiring</title>
+  <title>Gravity hat wiring</title>
   <rect width="1180" height="680" fill="#ffffff"/>
 
   <g fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -14,7 +14,7 @@
     <path stroke="#222222" d="M360 530 V600"/>
     <path stroke="#222222" d="M900 530 V600"/>
     <path stroke="#222222" d="M1060 326 V600"/>
-    <path stroke="#222222" d="M760 365 H780 V600 M760 450 H780 M760 500 H780"/>
+    <path stroke="#222222" d="M760 340 H780 V600 M760 365 H780 M760 495 H780"/>
 
     <!-- 3V3 -->
     <path stroke="#ef6c00" d="M500 410 H620 M620 385 V430"/>
@@ -23,19 +23,16 @@
     <path stroke="#1565c0" d="M500 190 H740 M800 190 H830"/>
     <path stroke="#1565c0" d="M740 190 l5 -9 l10 18 l10 -18 l10 18 l10 -18 l10 18 l5 -9"/>
 
-    <!-- IMU interrupt -->
-    <path stroke="#00838f" d="M500 265 H600"/>
-
     <!-- SPI -->
     <path stroke="#6a1b9a" d="M500 290 H600 M500 315 H600 M500 340 H600 M500 365 H600"/>
 
-    <!-- I2S -->
-    <path stroke="#2e7d32" d="M500 450 H600 M500 475 H600 M500 500 H600"/>
+    <!-- Microphone -->
+    <path stroke="#2e7d32" d="M500 445 H600 M500 470 H600 M500 495 H600"/>
   </g>
 
   <!-- Junctions -->
   <g fill="#d32f2f"><circle cx="360" cy="50" r="4.5"/><circle cx="900" cy="50" r="4.5"/></g>
-  <g fill="#222222"><circle cx="360" cy="600" r="4.5"/><circle cx="780" cy="600" r="4.5"/><circle cx="900" cy="600" r="4.5"/><circle cx="780" cy="450" r="4.5"/><circle cx="780" cy="500" r="4.5"/></g>
+  <g fill="#222222"><circle cx="360" cy="600" r="4.5"/><circle cx="780" cy="600" r="4.5"/><circle cx="900" cy="600" r="4.5"/><circle cx="780" cy="495" r="4.5"/><circle cx="780" cy="365" r="4.5"/></g>
   <circle cx="620" cy="410" r="4.5" fill="#ef6c00"/>
 
   <!-- Schottky diode 1N5819: anode on the supply, cathode (bar) to the board -->
@@ -44,11 +41,11 @@
   <text x="384" y="94" font-weight="bold">1N5819</text>
   <text x="384" y="110" fill="#555555">Schottky; blocks USB 5 V from the LEDs</text>
 
-  <!-- Capacitor 1500 µF, + to 5 V -->
+  <!-- Capacitor, + to 5 V -->
   <path d="M1042 310 H1078" stroke="#d32f2f" stroke-width="3"/>
   <path d="M1042 326 H1078" stroke="#222222" stroke-width="3"/>
   <text x="1030" y="306" font-weight="bold" fill="#d32f2f">+</text>
-  <text x="1086" y="314" font-weight="bold">1500 µF</text>
+  <text x="1086" y="314" font-weight="bold">≥ 1000 µF</text>
   <text x="1086" y="330" fill="#555555">≥ 10 V</text>
 
   <!-- Resistor label -->
@@ -62,8 +59,8 @@
   <g fill="#f5f5f5" stroke="#444444" stroke-width="1.5">
     <rect x="20" y="280" width="140" height="100" rx="6"/>
     <rect x="300" y="170" width="200" height="360" rx="6"/>
-    <rect x="600" y="245" width="160" height="140" rx="6"/>
-    <rect x="600" y="430" width="160" height="100" rx="6"/>
+    <rect x="600" y="270" width="160" height="115" rx="6"/>
+    <rect x="600" y="430" width="160" height="80" rx="6"/>
     <rect x="830" y="150" width="180" height="380" rx="6"/>
   </g>
 
@@ -73,51 +70,50 @@
   <text x="100" y="298">+</text>
   <text x="100" y="372">−</text>
 
-  <!-- SuperMini -->
-  <text x="400" y="236" text-anchor="middle" font-weight="bold">ESP32-S3</text>
-  <text x="400" y="252" text-anchor="middle" font-weight="bold">SuperMini</text>
-  <text x="310" y="300" fill="#555555">USB-C</text>
+  <!-- ESP32 -->
+  <text x="400" y="236" text-anchor="middle" font-weight="bold">ESP32-WROOM-32</text>
+  <text x="400" y="252" text-anchor="middle" font-weight="bold">board</text>
+  <text x="310" y="300" fill="#555555">USB</text>
   <text x="310" y="316" fill="#555555">(flash, debug)</text>
   <text x="366" y="186">5V</text>
   <text x="366" y="524">GND</text>
   <g text-anchor="end">
-    <text x="492" y="194">GPIO 2</text>
-    <text x="492" y="269">GPIO 9</text>
-    <text x="492" y="294">GPIO 10</text>
-    <text x="492" y="319">GPIO 11</text>
-    <text x="492" y="344">GPIO 12</text>
-    <text x="492" y="369">GPIO 13</text>
+    <text x="492" y="194">GPIO 13</text>
+    <text x="492" y="294">GPIO 5</text>
+    <text x="492" y="319">GPIO 23</text>
+    <text x="492" y="344">GPIO 18</text>
+    <text x="492" y="369">GPIO 19</text>
     <text x="492" y="414">3V3</text>
-    <text x="492" y="454">GPIO 5</text>
-    <text x="492" y="479">GPIO 6</text>
-    <text x="492" y="504">GPIO 7</text>
+    <text x="492" y="449">GPIO 33</text>
+    <text x="492" y="474">GPIO 25</text>
+    <text x="492" y="499">GPIO 32</text>
   </g>
 
-  <!-- BMI160 -->
-  <text x="680" y="237" text-anchor="middle" font-weight="bold">BMI160 (SPI)</text>
-  <text x="608" y="269">INT1</text>
-  <text x="608" y="294">CS</text>
+  <!-- MPU-6500 -->
+  <text x="680" y="262" text-anchor="middle" font-weight="bold">MPU-92/65 (MPU-6500, SPI)</text>
+  <text x="608" y="294">NCS</text>
   <text x="608" y="319">SDA (SDI)</text>
-  <text x="608" y="344">SCL (SCK)</text>
-  <text x="608" y="369">SA0 (SDO)</text>
+  <text x="608" y="344">SCL (SCLK)</text>
+  <text x="608" y="369">AD0 (SDO)</text>
+  <text x="752" y="344" text-anchor="end">FSYNC</text>
   <text x="752" y="369" text-anchor="end">GND</text>
-  <text x="628" y="400">3V3</text>
+  <text x="628" y="400">VCC</text>
 
-  <!-- INMP441 -->
-  <text x="680" y="550" text-anchor="middle" font-weight="bold">INMP441 (I2S)</text>
+  <!-- Microphone -->
+  <text x="608" y="449">SCK</text>
+  <text x="608" y="474">WS</text>
+  <text x="608" y="499">SD</text>
+  <text x="680" y="530" text-anchor="middle" font-weight="bold">I2S microphone</text>
+  <text x="680" y="546" text-anchor="middle" fill="#555555">pulses the brightness</text>
   <text x="628" y="424">VDD</text>
-  <text x="608" y="454">SCK</text>
-  <text x="608" y="479">WS</text>
-  <text x="608" y="504">SD</text>
-  <text x="752" y="454" text-anchor="end">GND</text>
-  <text x="752" y="504" text-anchor="end">L/R</text>
+  <text x="752" y="499" text-anchor="end">GND, L/R</text>
 
-  <!-- LED panels -->
-  <text x="920" y="250" text-anchor="middle" font-weight="bold">6 × 8x8 WS2812B</text>
-  <text x="920" y="268" text-anchor="middle">384 LEDs, one chain</text>
-  <text x="920" y="300" text-anchor="middle" fill="#555555">0 Left → 1 Back</text>
-  <text x="920" y="318" text-anchor="middle" fill="#555555">→ 2 Right → 3 Front</text>
-  <text x="920" y="336" text-anchor="middle" fill="#555555">→ 4 Bottom → 5 Top</text>
+  <!-- LED strip -->
+  <text x="920" y="250" text-anchor="middle" font-weight="bold">WS2812B strip</text>
+  <text x="920" y="268" text-anchor="middle">500 LEDs</text>
+  <text x="920" y="300" text-anchor="middle" fill="#555555">spiral of 13 turns,</text>
+  <text x="920" y="318" text-anchor="middle" fill="#555555">39 to 36.8 LEDs a turn,</text>
+  <text x="920" y="336" text-anchor="middle" fill="#555555">clockwise from the bottom</text>
   <text x="838" y="194">DIN</text>
   <text x="906" y="168">5V</text>
   <text x="906" y="524">GND</text>
@@ -129,7 +125,6 @@
     <path d="M170 0 H194" stroke="#222222" stroke-width="2.5"/><text x="200" y="4">GND</text>
     <path d="M260 0 H284" stroke="#1565c0" stroke-width="2.5"/><text x="290" y="4">LED data</text>
     <path d="M370 0 H394" stroke="#6a1b9a" stroke-width="2.5"/><text x="400" y="4">IMU SPI</text>
-    <path d="M720 0 H744" stroke="#00838f" stroke-width="2.5"/><text x="750" y="4">IMU INT1</text>
-    <path d="M470 0 H494" stroke="#2e7d32" stroke-width="2.5"/><text x="500" y="4">Mic I2S (not read by the firmware)</text>
+    <path d="M470 0 H494" stroke="#2e7d32" stroke-width="2.5"/><text x="500" y="4">Microphone I2S</text>
   </g>
 </svg>
