@@ -4,10 +4,9 @@
  * the same way round; a hat that narrows has fewer LEDs in its upper
  * turns. The fluid runs on a grid of cells HAT_CELL_LEDS LED spacings
  * across, FLUID_NX x FLUID_NY x FLUID_NZ, with the hat's axis up the
- * middle. Heights and radii below are in cells unless named otherwise. */
+ * middle. The shape that follows from these numbers is in shape.h. */
 #pragma once
 
-#include <math.h>
 #include <stdint.h>
 
 #define HAT_LED_COUNT 500
@@ -29,19 +28,8 @@
  * and a cell about every 2 rows, and a step of about the 18 ms frame. */
 #define HAT_CELL_LEDS 1.4f
 
-/* Turns of the spiral: the LEDs per turn change evenly from one end to
- * the other, so the mean of the two ends sets how many turns the strip
- * makes. */
-#define HAT_TURNS           (2.0f * HAT_LED_COUNT / (HAT_LEDS_PER_TURN_BOTTOM + HAT_LEDS_PER_TURN_TOP))
-#define HAT_ROW_PITCH_CELLS (HAT_ROW_PITCH / HAT_CELL_LEDS)
-/* The hat reaches half a row beyond the first and the last turn. */
-#define HAT_HEIGHT ((HAT_TURNS + 1.0f) * HAT_ROW_PITCH_CELLS)
-/* Radius of the widest turn. */
-#define HAT_RADIUS_MAX                                                                             \
-    (fmaxf(HAT_LEDS_PER_TURN_BOTTOM, HAT_LEDS_PER_TURN_TOP) / (6.2831853f * HAT_CELL_LEDS))
-
 /* The grid round the hat: at least 2 * HAT_RADIUS_MAX across and
- * HAT_HEIGHT high (test_fluid checks). */
+ * HAT_HEIGHT high (shape.h; test_fluid checks). */
 #define FLUID_NX 9
 #define FLUID_NY 9
 #define FLUID_NZ 7
@@ -56,26 +44,6 @@
 /* Gravity in cells per step squared: at an 18 ms step, 1 g for cells
  * HAT_CELL_LEDS LED spacings across (9.81 m/s^2 * 0.018^2 s^2 / cell). */
 #define FLUID_GRAVITY (9.81f * 0.018f * 0.018f * 1000.0f / (HAT_CELL_LEDS * HAT_LED_SPACING_MM))
-
-/* Turns from the bottom of the spiral at height z, 0 to HAT_TURNS. */
-static inline float hat_turns_at_height(float z)
-{
-    const float t = z / HAT_ROW_PITCH_CELLS - 0.5f;
-    return t < 0.0f ? 0.0f : t > HAT_TURNS ? HAT_TURNS : t;
-}
-
-/* Radius of the hat at height z: its LEDs per turn there, round a circle
- * of cells. */
-static inline float hat_radius_at(float z)
-{
-    const float n = HAT_LEDS_PER_TURN_BOTTOM + (HAT_LEDS_PER_TURN_TOP - HAT_LEDS_PER_TURN_BOTTOM) *
-                                                   hat_turns_at_height(z) / HAT_TURNS;
-    return n / (6.2831853f * HAT_CELL_LEDS);
-}
-
-typedef struct {
-    uint8_t r, g, b;
-} color_t;
 
 /* The fluid starts green. A double tap picks a random hue; its channels
  * always add up to FLUID_LEVEL, so every colour draws the current of one

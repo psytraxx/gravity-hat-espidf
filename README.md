@@ -262,7 +262,6 @@ Without a token, anyone on the network hat reflash the hat.
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
 | IMU rotation | 90° | Where LED 0's side lies seen from the IMU board's X arrow, counter-clockwise; see [Setting up a hat](#setting-up-a-hat) |
-| I2C scan at startup | off | Wiring check: probes the IMU pins as I2C; finds the MPU-6500 at 0x68/0x69 after a power on |
 | Pulse the brightness with the sound | on | Reads the I2S microphone |
 | Microphone pins | 32, 33, 25 | SD, SCK, WS |
 | Brightness in the quiet | 25 % | Loud sounds pulse it up to full |
@@ -369,7 +368,7 @@ than steps.
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
 | `main/mic.c` | I2S microphone on core 1: the loudness of the latest 20 ms |
 | `main/ws2812.c` | The strip through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: fluid, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding |
+| `main/core/` | Everything that needs no hardware: the hat's numbers (`config.h`) and shape (`shape.h`), fluid, frames, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding and batching |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 
 ## Tests

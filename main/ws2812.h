@@ -3,7 +3,7 @@
 #pragma once
 
 #include "esp_err.h"
-#include "hat.h"
+#include "frame.h"
 
 /* Set up the RMT channel. Its interrupt runs on the calling core. */
 esp_err_t ws2812_init(int gpio);

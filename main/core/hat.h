@@ -15,15 +15,9 @@
 
 #include "config.h"
 #include "fluid.h"
+#include "frame.h"
+#include "shape.h"
 #include "vec3.h"
-
-/* One frame: an RGB colour per LED, in strip order. */
-typedef struct {
-    uint8_t rgb[LED_COUNT * 3];
-} frame_t;
-
-void frame_clear(frame_t *f);
-void frame_set_led(frame_t *f, int led, color_t color);
 
 /* Angle of LED `led` round the hat in radians, counter-clockwise from +x
  * seen from above, in [0, 2 pi). */

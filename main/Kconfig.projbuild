@@ -71,17 +71,6 @@ config HAT_IMU_YAW_DEG
         is 90, on the blue 180, on the yellow 270. The monitor logs it
         exactly as "low side at N deg" (add 360 if N is negative).
 
-config HAT_IMU_I2C_SCAN
-    bool "Scan for I2C devices on the IMU pins at startup"
-    default n
-    help
-        Wiring check: before setting up SPI, hold NCS high (which puts the
-        MPU-6500 on I2C) and probe every address with SCL on the SCLK pin
-        and SDA on the MOSI pin. An MPU-6500 answers at 0x68 (AD0 low) or
-        0x69 (AD0 high). The SPI setup turns the chip's I2C interface off
-        until it is power cycled, so the scan only finds it after a power
-        on, not after a reset.
-
 menu "Microphone"
 
 config HAT_MIC
