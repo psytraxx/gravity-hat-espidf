@@ -383,5 +383,5 @@ cmake -S test/host -B build-host && cmake --build build-host
 ctest --test-dir build-host --output-on-failure
 ```
 
-CI runs them and builds the firmware for the ESP32 on every push and
-pull request.
+CI runs them and builds the firmware for the ESP32 on every pull request
+and every push to `main`.
