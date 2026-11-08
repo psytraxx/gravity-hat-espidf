@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "fluid.h"
+#include "shape.h"
 #include "unity.h"
 
 static fluid_t f;

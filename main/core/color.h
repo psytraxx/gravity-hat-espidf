@@ -5,6 +5,10 @@
 
 #include "config.h"
 
+typedef struct {
+    uint8_t r, g, b;
+} color_t;
+
 /* The colour at `hue` degrees (0 red, 120 green, 240 blue), blended
  * between two channels whose sum is always FLUID_LEVEL: every hue draws
  * the current of one channel at FLUID_LEVEL. */

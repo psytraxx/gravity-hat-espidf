@@ -3,6 +3,8 @@
 #include <math.h>
 #include <string.h>
 
+#include "shape.h"
+
 #define NX FLUID_NX
 #define NY FLUID_NY
 #define NZ FLUID_NZ
@@ -23,7 +25,8 @@
 #define SEPARATION_PASSES 1
 
 /* Gauss-Seidel passes of the pressure solve, and its over-relaxation. The
- * hat's 14-cell column needs 50 passes to settle still. */
+ * hat needs 60 to settle still; with fewer, LEDs at a still surface
+ * flicker several times as often. */
 #define PRESSURE_ITERATIONS 60
 #define OVER_RELAXATION     1.9f
 
