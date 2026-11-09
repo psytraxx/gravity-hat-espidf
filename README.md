@@ -12,7 +12,7 @@ Hold the hat upside down for two seconds and it changes mode:
 | Mode | |
 |---|---|
 | Fluid | The liquid in the hat |
-| Fire | Flames that always burn upwards in the room, whichever way the hat is tilted; loud sound stokes them |
+| Fire | Flames that always burn upwards in the room, whichever way the hat is tilted; each beat and each jolt throws them up the hat, and in free fall they stall |
 | Spectrum | The sound's spectrum as 16 bars round the hat, bass to treble, fixed in the room: turn your head and the bars stay where they are while the hat turns under them |
 
 A white arc grows round the brim while the hat is held upside down, and
@@ -26,6 +26,12 @@ to the fluid](docs/modes-fire.gif)
 *Rendered from the firmware's core code on a computer, over a scripted
 set of tilts and a beat for the sound: the hat on the left, the strip
 unrolled on the right.*
+
+![Fire in the quiet, then leaping up the hat on every beat, flaring when
+shaken, leaning into a shove, hanging in free fall after a jump, and
+tilted to the beat](docs/fire-motion.gif)
+
+*The fire to a beat and to the hat's motion, rendered the same way.*
 
 ![The spectrum's bars standing still in the room while the hat turns
 left and right, nods and spins round under them](docs/spectrum.gif)
@@ -384,8 +390,19 @@ its side the flames get away from the low side and rise round it both
 ways. Fuel burns past the wall's edge the gas comes in from and along
 the wall's lowest part in the room, with a random flicker per column;
 the heat then loses a share and a random amount each step, so flames
-lick up and break off. The sound's pulse adds fuel and slows the
-cooling. Heat runs from dark through deep red to orange and yellow, at
+lick up and break off.
+
+The flames follow the hat's motion and the sound. Up is smoothed only a
+little, so they lean into a sideways shove at once, as a helium balloon
+in a car leans forwards when it speeds up. The gas rises as fast as the
+acceleration the hat feels (up to 2.5 g): pressed upwards the flames
+shoot higher, and tossed into free fall they stall and hang. A beat (the
+sound's pulse, squared, so the beat itself counts and its fading tail
+does not) or a jolt (a change of 0.8 g between two frames fans it like a
+full beat) stokes the fire: more fuel, gas rising up to 2.5 times as
+fast, and up to 70 % less random cooling. Quiet flames reach about a
+quarter of the way up; a beat throws them to the crown within about
+0.13 s, and they fall back before the next one at 120 bpm. Heat runs from dark through deep red to orange and yellow, at
 no more than the fluid's 60/255 a LED.
 
 **Spectrum.** The microphone task keeps the latest 512 samples (32 ms)

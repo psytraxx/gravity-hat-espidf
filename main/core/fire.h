@@ -12,7 +12,15 @@
  * points away from, and along the wall's lowest part in the room. Its
  * flicker is random per column and smoothed over a few steps, and the
  * heat cools by a share and a random amount each step, so flames lick up
- * and break off. Louder sound stokes the fire: more fuel, slower cooling.
+ * and break off.
+ *
+ * The fire follows the hat's motion too. Up is smoothed only a little,
+ * so the flames lean into a sideways shove at once, as a helium balloon
+ * in a car leans forwards when it speeds up; the gas rises as
+ * fast as the acceleration the hat feels, so pressed upwards the flames
+ * shoot higher and in free fall they stall. A beat in the sound or a
+ * jolt to the hat stokes the fire: more fuel, faster rise, slower
+ * cooling, so the flames leap up the hat.
  *
  * Units are cells (as the fluid's) and steps; the random numbers come
  * from a seeded generator, so a run repeats. */
@@ -49,7 +57,8 @@ typedef struct {
 void fire_init(fire_t *f, uint32_t seed);
 
 /* Advance one step. `accel` is gravity plus motion in g, in hat axes,
- * pointing the way the fluid falls; `stoke` (0 to 1) is how loud it is. */
+ * pointing the way the fluid falls; `stoke` (0 to 1) is the sound's
+ * pulse. */
 void fire_step(fire_t *f, vec3_t accel, float stoke);
 
 /* Heat (0 to 1) at angle `a` (radians, counter-clockwise from +x seen from
