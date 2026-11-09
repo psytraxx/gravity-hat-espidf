@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "driver/gpio.h"
 #include "driver/i2s_std.h"
@@ -22,6 +23,11 @@ static int32_t s_buf[CHUNK_FRAMES * 2];
 /* Latest RMS, and whether the microphone sends anything. */
 static volatile float s_rms;
 static volatile bool s_present;
+/* The latest SPECTRUM_N samples of the louder slot, oldest first, and
+ * their band levels; the levels are shared with core 0 under the lock. */
+static float s_ring[SPECTRUM_N];
+static float s_bands[SPECTRUM_BANDS];
+static portMUX_TYPE s_bands_lock = portMUX_INITIALIZER_UNLOCKED;
 
 /* RMS of one slot (0 left, 1 right) of the chunk, DC removed, full scale
  * 1.0. Sets *any if a sample is not zero. */
@@ -59,6 +65,18 @@ static void mic_task(void *arg)
         const float right = slot_rms(s_buf, frames, 1, &any);
         s_rms = fmaxf(left, right);
         s_present = any;
+
+        const int slot = right > left ? 1 : 0;
+        const int keep = SPECTRUM_N > frames ? SPECTRUM_N - frames : 0;
+        memmove(s_ring, s_ring + (SPECTRUM_N - keep), keep * sizeof s_ring[0]);
+        for (int i = keep; i < SPECTRUM_N; i++) {
+            s_ring[i] = (float)(s_buf[2 * (frames - SPECTRUM_N + i) + slot] >> 8) / 8388608.0f;
+        }
+        float bands[SPECTRUM_BANDS];
+        spectrum_bands(s_ring, bands);
+        taskENTER_CRITICAL(&s_bands_lock);
+        memcpy(s_bands, bands, sizeof s_bands);
+        taskEXIT_CRITICAL(&s_bands_lock);
     }
 }
 
@@ -83,7 +101,7 @@ esp_err_t mic_start(void)
     /* Without a microphone the data line reads zeros, not noise. */
     gpio_pulldown_en(CONFIG_HAT_MIC_SD);
     ESP_RETURN_ON_ERROR(i2s_channel_enable(s_rx), TAG, "enable");
-    xTaskCreatePinnedToCore(mic_task, "mic", 3072, NULL, 3, NULL, 1);
+    xTaskCreatePinnedToCore(mic_task, "mic", 4096, NULL, 3, NULL, 1);
     ESP_LOGI(TAG, "I2S microphone: SD %d, SCK %d, WS %d, %d Hz", CONFIG_HAT_MIC_SD,
              CONFIG_HAT_MIC_SCK, CONFIG_HAT_MIC_WS, SAMPLE_RATE_HZ);
     return ESP_OK;
@@ -92,5 +110,13 @@ esp_err_t mic_start(void)
 bool mic_level(float *rms)
 {
     *rms = s_rms;
+    return s_present;
+}
+
+bool mic_bands(float db[SPECTRUM_BANDS])
+{
+    taskENTER_CRITICAL(&s_bands_lock);
+    memcpy(db, s_bands, sizeof s_bands);
+    taskEXIT_CRITICAL(&s_bands_lock);
     return s_present;
 }

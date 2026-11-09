@@ -13,9 +13,8 @@ describes the hardware, wiring and design.
 
 - `main/core/` holds everything that needs no hardware: the hat's
   numbers (`config.h`) and shape (`shape.h`), modes, fluid, fire,
-  frames, LED spiral,
-  colours, motion filter, tap detector, sound pulse, IMU decoding and
-  batching. It must not include ESP-IDF or `sdkconfig.h` headers, so it
+  spectrum, heading, frames, LED spiral, colours, motion filter, tap
+  detector, sound pulse, IMU decoding and batching. It must not include ESP-IDF or `sdkconfig.h` headers, so it
   builds on the host.
 - `main/*.c` are the ESP-IDF parts: main loop, MPU-6500 and microphone drivers, WS2812
   driver. Pins and options come from `main/Kconfig.projbuild`.
