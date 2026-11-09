@@ -415,7 +415,11 @@ which jumps up and sinks 6 dB a second. A bar jumps to its band's place
 between floor and peak and falls 1.5 hat heights a second; a white mark
 holds its highest point for 0.4 s, then falls too. The bars stand round
 the hat in rainbow order, red bass to violet treble, counter-clockwise
-seen from above.
+seen from above. The spiral's LEDs do not sit above each other from one
+turn to the next, so each LED lights by how much of its width falls in
+a bar (squared, for the eye), and its top LED by how much of its row the
+bar fills: on every turn the light is centred on the bar's angle, and
+the bars stand straight and rise smoothly.
 
 They are fixed in the room by the hat's heading: each frame, the part
 of the gyro's rotation about the room's up (against the motion filter's

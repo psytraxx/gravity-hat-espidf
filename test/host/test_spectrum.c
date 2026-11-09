@@ -120,57 +120,77 @@ static void test_steady_hum_settles(void)
     TEST_ASSERT_EQUAL_FLOAT(0.0f, m.bar[0]);
 }
 
-/* LEDs of the frame lit at full brightness (not the dim base) whose room
- * angle is within the first band, and all of them. */
-static void count_lit(const spectrum_meter_t *m, float yaw, int *in_band, int *all)
+/* Light of the frame (channels added up) on LEDs from `lo` to `hi` of the
+ * hat's height. */
+static float light_between(const spectrum_meter_t *m, float lo, float hi)
 {
     static frame_t frame;
-    spectrum_frame(m, yaw, &frame);
-    *in_band = *all = 0;
+    spectrum_frame(m, 0.0f, &frame);
+    float sum = 0.0f;
     for (int i = 0; i < LED_COUNT; i++) {
-        if (frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2] < FLUID_LEVEL / 2) {
-            continue;
-        }
-        (*all)++;
-        const float a = fmodf(hat_led_angle(i) + yaw, 2.0f * PI);
-        if (a < 2.0f * PI / SPECTRUM_BANDS) {
-            (*in_band)++;
+        const float up = hat_led_height(i) / HAT_HEIGHT;
+        if (up >= lo && up < hi) {
+            sum += frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2];
         }
     }
+    return sum;
 }
 
 /* One full bar stands in the same place in the room whichever way the
- * hat faces. */
-static void test_bars_stay_in_the_room(void)
+ * hat faces, and straight: on every turn above the base, its light is
+ * centred on the bar's angle to within a fifth of an LED, though the
+ * LEDs of one turn do not sit above those of the next. */
+static void test_bars_stand_straight_in_the_room(void)
 {
     spectrum_meter_t m;
     spectrum_meter_init(&m);
     m.bar[0] = 1.0f;
-    for (int k = 0; k < 8; k++) {
-        int in_band, all;
-        count_lit(&m, k * 0.8f, &in_band, &all);
-        TEST_ASSERT_GREATER_THAN_INT(15, all);
-        TEST_ASSERT_EQUAL_INT(all, in_band);
+    const float centre = PI / SPECTRUM_BANDS;
+    const float led = 2.0f * PI / HAT_LEDS_PER_TURN_BOTTOM;
+    static frame_t frame;
+    for (int k = 0; k < 16; k++) {
+        const float yaw = k * 0.41f;
+        spectrum_frame(&m, yaw, &frame);
+        /* Light-weighted mean angle from the centre, per turn. */
+        float sum[20] = {0}, weight[20] = {0};
+        for (int i = 0; i < LED_COUNT; i++) {
+            const float light = frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2];
+            const float turn = hat_led_height(i) / HAT_ROW_PITCH_CELLS - 0.5f;
+            if (light == 0.0f || turn < 1.0f) {
+                continue;
+            }
+            const float d = fmodf(hat_led_angle(i) + yaw - centre + 3.0f * PI, 2.0f * PI) - PI;
+            TEST_ASSERT_LESS_THAN_FLOAT(PI / SPECTRUM_BANDS + led, fabsf(d));
+            sum[(int)turn] += light * d;
+            weight[(int)turn] += light;
+        }
+        for (int t = 1; t < (int)HAT_TURNS; t++) {
+            TEST_ASSERT_GREATER_THAN_FLOAT(0.0f, weight[t]);
+            TEST_ASSERT_FLOAT_WITHIN(0.2f * led, 0.0f, sum[t] / weight[t]);
+        }
     }
 }
 
-/* A bar lights LEDs up to its height, from the brim. */
+/* A bar lights the hat up to its height, from the brim, and leaves gaps
+ * between the bars. */
 static void test_bar_height(void)
 {
     spectrum_meter_t m;
     spectrum_meter_init(&m);
-    int full, half, dummy;
     for (int b = 0; b < SPECTRUM_BANDS; b++) {
         m.bar[b] = 1.0f;
     }
-    count_lit(&m, 0.0f, &dummy, &full);
+    const float full_low = light_between(&m, 0.2f, 0.45f);
+    const float full_high = light_between(&m, 0.55f, 1.0f);
     for (int b = 0; b < SPECTRUM_BANDS; b++) {
         m.bar[b] = 0.5f;
     }
-    count_lit(&m, 0.0f, &dummy, &half);
-    TEST_ASSERT_INT_WITHIN(full / 10, full / 2, half);
-    /* The bars leave gaps between them. */
-    TEST_ASSERT_LESS_THAN_INT(LED_COUNT * 8 / 10, full);
+    TEST_ASSERT_FLOAT_WITHIN(full_low * 0.02f, full_low, light_between(&m, 0.2f, 0.45f));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, light_between(&m, 0.55f, 1.0f));
+    /* The bars light less than the whole wall would at full power. */
+    const int leds_high = (int)(LED_COUNT * 0.45f);
+    TEST_ASSERT_LESS_THAN_FLOAT(0.8f * FLUID_LEVEL * leds_high, full_high);
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.4f * FLUID_LEVEL * leds_high, full_high);
 }
 
 /* In silence the bottom turn glows dimly all the way round and nothing
@@ -205,7 +225,7 @@ int main(void)
     RUN_TEST(test_tone_lands_in_its_band);
     RUN_TEST(test_meter_bars);
     RUN_TEST(test_steady_hum_settles);
-    RUN_TEST(test_bars_stay_in_the_room);
+    RUN_TEST(test_bars_stand_straight_in_the_room);
     RUN_TEST(test_bar_height);
     RUN_TEST(test_silence_shows_the_base);
     return UNITY_END();
