@@ -12,7 +12,8 @@ describes the hardware, wiring and design.
 ## Layout
 
 - `main/core/` holds everything that needs no hardware: the hat's
-  numbers (`config.h`) and shape (`shape.h`), fluid, frames, LED spiral,
+  numbers (`config.h`) and shape (`shape.h`), modes, fluid, fire,
+  frames, LED spiral,
   colours, motion filter, tap detector, sound pulse, IMU decoding and
   batching. It must not include ESP-IDF or `sdkconfig.h` headers, so it
   builds on the host.

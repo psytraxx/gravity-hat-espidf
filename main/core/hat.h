@@ -46,6 +46,11 @@ void hat_view_init(hat_view_t *v);
 void hat_view_frame(hat_view_t *v, const fluid_t *f, uint32_t hue, float brightness,
                     frame_t *frame);
 
+/* While the hat is held upside down to change mode: a white arc grows
+ * round the bottom turn, the brim, (on top while the hat is upside down)
+ * as `progress` runs from 0 to 1. LEDs past it are left alone. */
+void hat_progress_overlay(frame_t *frame, float progress);
+
 /* Calibration picture. Four coloured lines run up the hat, the LED
  * nearest each angle on every turn: red at LED 0's angle (+x), then green
  * (+y), blue (-x) and yellow (-y) a quarter turn apart, counter-clockwise

@@ -1,6 +1,8 @@
 /* Gravity hat: a fluid in a hat whose LED strip, wound round its crown in a
  * spiral, shows the liquid inside. Tilt it and the surface tilts; shake
- * it and the fluid sloshes; its brightness pulses with the sound.
+ * it and the fluid sloshes; its brightness pulses with the sound. Held
+ * upside down for two seconds, it moves on to the next mode: fire that
+ * burns upwards in the room, stoked by the sound, then the fluid again.
  *
  * Core 0 (this task) reads the IMU, runs the physics and builds frames;
  * core 1 sends them to the LEDs. The RMT send takes ~15 ms per changed
@@ -14,8 +16,10 @@
 #include "esp_log.h"
 #include "esp_random.h"
 #include "esp_timer.h"
+#include "fire.h"
 #include "fluid.h"
 #include "imu.h"
+#include "mode.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -134,6 +138,12 @@ void app_main(void)
     ESP_LOGI(TAG, "%d fluid particles; double-tap the hat to change colour", fluid.n);
     uint32_t hue = FLUID_HUE;
 
+    static fire_t fire;
+    fire_init(&fire, esp_random() | 1u);
+    mode_switch_t modes;
+    mode_switch_init(&modes, MODE_FLUID);
+    ESP_LOGI(TAG, "Hold the hat upside down for %.0f s to change mode", MODE_HOLD_S);
+
     tap_detector_t taps;
     tap_init(&taps, CONFIG_HAT_TAP_THRESHOLD_MG / 1000.0f);
     motion_filter_t motion;
@@ -168,10 +178,9 @@ void app_main(void)
         }
         imu_batch(&imu, samples, n, MPU6500_SAMPLE_MS / 1000.0f);
 
-        const int64_t start = esp_timer_get_time();
-        fluid_set_rotation(&fluid, imu.rotation);
-        fluid_step(&fluid, motion_filter_apply(&motion, imu.accel, imu.rotation));
-        const int64_t physics_us = esp_timer_get_time() - start;
+        if (mode_switch_feed(&modes, imu.accel, CONFIG_HAT_FRAME_MS / 1000.0f)) {
+            ESP_LOGI(TAG, "Mode: %s", mode_name(modes.mode));
+        }
 
         /* The latest 20 ms of sound sets the brightness; without a
          * microphone sending, it stays full. */
@@ -181,25 +190,50 @@ void app_main(void)
         have_sound = mic_level(&rms);
 #endif
         float brightness = 1.0f;
+        float pulse = 0.0f;
         if (have_sound) {
             sound_db = audio_db(rms);
-            audio_feed(&audio, sound_db, CONFIG_HAT_FRAME_MS / 1000.0f);
+            pulse = audio_feed(&audio, sound_db, CONFIG_HAT_FRAME_MS / 1000.0f);
             brightness = audio_brightness(&audio);
         }
 
-        hat_view_frame(&view, &fluid, hue, brightness, &frame);
+        /* Only the mode on show runs; the fluid waits where it is while
+         * the fire burns, stoked by the sound. */
+        const int64_t start = esp_timer_get_time();
+        const vec3_t accel = motion_filter_apply(&motion, imu.accel, imu.rotation);
+        switch (modes.mode) {
+        case MODE_FIRE:
+            fire_step(&fire, accel, pulse);
+            break;
+        default:
+            fluid_set_rotation(&fluid, imu.rotation);
+            fluid_step(&fluid, accel);
+            break;
+        }
+        const int64_t physics_us = esp_timer_get_time() - start;
+
+        switch (modes.mode) {
+        case MODE_FIRE:
+            fire_frame(&fire, &frame);
+            break;
+        default:
+            hat_view_frame(&view, &fluid, hue, brightness, &frame);
+            break;
+        }
+        hat_progress_overlay(&frame, mode_switch_progress(&modes));
         xQueueSend(s_frames, &frame, portMAX_DELAY);
         const int64_t frame_us = esp_timer_get_time() - start;
 
         if (++loops % LOG_EVERY == 0) {
-            ESP_LOGI(TAG,
-                     "Loop %lu: accel (%.2f, %.2f, %.2f) |%.2f| g, gyro (%.2f, %.2f, %.2f) rad/s, "
-                     "sound %.0f dB%s, brightness %.0f %%, physics %lld us, frame %lld us, "
-                     "LED send %lld us",
-                     (unsigned long)loops, imu.accel.x, imu.accel.y, imu.accel.z, v3_len(imu.accel),
-                     imu.rate.x, imu.rate.y, imu.rate.z, sound_db,
-                     have_sound ? "" : " (no microphone)", 100.0f * brightness, physics_us,
-                     frame_us, s_led_send_us);
+            ESP_LOGI(
+                TAG,
+                "Loop %lu, %s: accel (%.2f, %.2f, %.2f) |%.2f| g, gyro (%.2f, %.2f, %.2f) rad/s, "
+                "sound %.0f dB%s, brightness %.0f %%, physics %lld us, frame %lld us, "
+                "LED send %lld us",
+                (unsigned long)loops, mode_name(modes.mode), imu.accel.x, imu.accel.y, imu.accel.z,
+                v3_len(imu.accel), imu.rate.x, imu.rate.y, imu.rate.z, sound_db,
+                have_sound ? "" : " (no microphone)", 100.0f * brightness, physics_us, frame_us,
+                s_led_send_us);
         }
         if (loops == LOG_EVERY) {
             ota_app_ok();
