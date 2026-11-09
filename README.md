@@ -18,6 +18,14 @@ A white arc grows round the brim while the hat is held upside down, and
 the next mode comes on when it closes. Turn the hat back the right way
 up before the next change; after the last mode comes the fluid again.
 
+![The fluid sloshing, the hat held upside down until the arc closes, then
+fire leaning as the hat tilts, lies on its side and tips over, and back
+to the fluid](docs/modes-fire.gif)
+
+*Rendered from the firmware's core code on a computer, over a scripted
+set of tilts and a beat for the sound: the hat on the left, the strip
+unrolled on the right.*
+
 It runs on an ESP32-WROOM-32 with an MPU-6500 IMU and an I2S
 microphone, and is written in C for ESP-IDF 6.1. The physics is a port
 of the fluid solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
