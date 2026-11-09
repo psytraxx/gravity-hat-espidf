@@ -423,7 +423,9 @@ gravity) is added up, so turning round moves the heading and tilting or
 nodding does not. The bars are drawn that far back round the hat, so
 the bass stays where LED 0 faced at power on. Nothing corrects the
 heading, so it drifts by the gyro's leftover zero offset, a fraction of
-a degree a second. Without a microphone the bars stay dark.
+a degree a second. The bottom turn of every bar always glows dimly in
+its colour, so the mode shows in silence, and without a microphone the
+hat shows just that ring.
 
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
 staggered grid of 9 × 9 × 7 cells, each 1.4 LED spacings across, about

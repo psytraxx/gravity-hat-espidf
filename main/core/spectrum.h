@@ -51,7 +51,8 @@ void spectrum_meter_feed(spectrum_meter_t *m, const float db[SPECTRUM_BANDS], fl
 /* The spectrum round the hat, fixed in the room: the bands stand round
  * the hat from the bass to the treble, counter-clockwise seen from
  * above, as bars rising from the brim, each in its own colour from red to
- * violet with a white mark at its peak. `yaw` is how far the hat has
+ * violet with a white mark at its peak. The bottom turn of every bar
+ * always glows dimly in its colour, so the mode shows in silence too. `yaw` is how far the hat has
  * turned in the room (heading.h); the bars stay where they are while the
  * hat turns under them, with the bass where LED 0 faced at yaw 0. */
 void spectrum_frame(const spectrum_meter_t *m, float yaw, frame_t *frame);

@@ -120,15 +120,15 @@ static void test_steady_hum_settles(void)
     TEST_ASSERT_EQUAL_FLOAT(0.0f, m.bar[0]);
 }
 
-/* Lit LEDs of the frame whose room angle is within the first band, and
- * all lit LEDs. */
+/* LEDs of the frame lit at full brightness (not the dim base) whose room
+ * angle is within the first band, and all of them. */
 static void count_lit(const spectrum_meter_t *m, float yaw, int *in_band, int *all)
 {
     static frame_t frame;
     spectrum_frame(m, yaw, &frame);
     *in_band = *all = 0;
     for (int i = 0; i < LED_COUNT; i++) {
-        if (frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2] == 0) {
+        if (frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2] < FLUID_LEVEL / 2) {
             continue;
         }
         (*all)++;
@@ -173,6 +173,31 @@ static void test_bar_height(void)
     TEST_ASSERT_LESS_THAN_INT(LED_COUNT * 8 / 10, full);
 }
 
+/* In silence the bottom turn glows dimly all the way round and nothing
+ * above it lights. */
+static void test_silence_shows_the_base(void)
+{
+    spectrum_meter_t m;
+    spectrum_meter_init(&m);
+    static frame_t frame;
+    spectrum_frame(&m, 0.0f, &frame);
+    int base = 0, above = 0;
+    for (int i = 0; i < LED_COUNT; i++) {
+        const int sum = frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2];
+        if (sum == 0) {
+            continue;
+        }
+        TEST_ASSERT_LESS_THAN_INT(FLUID_LEVEL / 2, sum);
+        if (i < (int)HAT_LEDS_PER_TURN_BOTTOM) {
+            base++;
+        } else {
+            above++;
+        }
+    }
+    TEST_ASSERT_GREATER_THAN_INT(HAT_LEDS_PER_TURN_BOTTOM / 2, base);
+    TEST_ASSERT_LESS_THAN_INT(4, above);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -182,5 +207,6 @@ int main(void)
     RUN_TEST(test_steady_hum_settles);
     RUN_TEST(test_bars_stay_in_the_room);
     RUN_TEST(test_bar_height);
+    RUN_TEST(test_silence_shows_the_base);
     return UNITY_END();
 }

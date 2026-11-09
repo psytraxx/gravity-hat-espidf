@@ -150,6 +150,9 @@ void spectrum_meter_feed(spectrum_meter_t *m, const float db[SPECTRUM_BANDS], fl
 #define HUE_LOW  0.0f
 #define HUE_HIGH 280.0f
 static const color_t MARK = {14, 14, 14};
+/* The bottom turn of every bar glows at this share of full, so the
+ * spectrum shows in silence and without a microphone too. */
+#define BASE_BRIGHTNESS 0.25f
 
 void spectrum_frame(const spectrum_meter_t *m, float yaw, frame_t *frame)
 {
@@ -169,11 +172,16 @@ void spectrum_frame(const spectrum_meter_t *m, float yaw, frame_t *frame)
         const float up = hat_led_height(i) / HAT_HEIGHT;
         /* Half a row's tolerance either way. */
         const float row = HAT_ROW_PITCH_CELLS / HAT_HEIGHT;
+        const float hue = HUE_LOW + (HUE_HIGH - HUE_LOW) * b / (SPECTRUM_BANDS - 1);
+        const color_t color = color_from_hue((uint32_t)lrintf(hue));
         if (m->mark[b] > row && fabsf(up - m->mark[b]) < 0.5f * row) {
             frame_set_led(frame, i, MARK);
         } else if (up < m->bar[b]) {
-            const float hue = HUE_LOW + (HUE_HIGH - HUE_LOW) * b / (SPECTRUM_BANDS - 1);
-            frame_set_led(frame, i, color_from_hue((uint32_t)lrintf(hue)));
+            frame_set_led(frame, i, color);
+        } else if (up < 1.5f * row) {
+            /* The bottom turn, which climbs from half a row to one and a
+             * half. */
+            frame_set_led(frame, i, color_scale(color, BASE_BRIGHTNESS));
         }
     }
 }
