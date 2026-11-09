@@ -22,7 +22,7 @@
 
 #define SPECTRUM_N       512
 #define SPECTRUM_RATE_HZ 16000
-#define SPECTRUM_BANDS   16
+#define SPECTRUM_BANDS   12
 #define SPECTRUM_LOW_HZ  60.0f
 #define SPECTRUM_HIGH_HZ 7000.0f
 
