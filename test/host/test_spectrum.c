@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdbool.h>
 
 #include "hat.h"
 #include "spectrum.h"
@@ -137,9 +138,9 @@ static float light_between(const spectrum_meter_t *m, float lo, float hi)
 }
 
 /* One full bar stands in the same place in the room whichever way the
- * hat faces, and straight: on every turn above the base, its light is
- * centred on the bar's angle to within a fifth of an LED, though the
- * LEDs of one turn do not sit above those of the next. */
+ * hat faces, and straight: on every turn above the base, its light, as
+ * the eye sees it, is centred on the bar's angle to within a tenth of an
+ * LED, though the LEDs of one turn do not sit above those of the next. */
 static void test_bars_stand_straight_in_the_room(void)
 {
     spectrum_meter_t m;
@@ -151,23 +152,30 @@ static void test_bars_stand_straight_in_the_room(void)
     for (int k = 0; k < 16; k++) {
         const float yaw = k * 0.41f;
         spectrum_frame(&m, yaw, &frame);
-        /* Light-weighted mean angle from the centre, per turn. */
-        float sum[20] = {0}, weight[20] = {0};
-        for (int i = 0; i < LED_COUNT; i++) {
-            const float light = frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2];
-            const float turn = hat_led_height(i) / HAT_ROW_PITCH_CELLS - 0.5f;
-            if (light == 0.0f || turn < 1.0f) {
-                continue;
+        /* Each pass of the spiral through the bar is a run of lit LEDs:
+         * the light-weighted mean of their angles from the centre. The
+         * eye sees about the square root of an LED's power, as the
+         * frame's coverage gamma assumes. */
+        int passes = 0;
+        float sum = 0.0f, weight = 0.0f;
+        for (int i = 0; i <= LED_COUNT; i++) {
+            const float light = i < LED_COUNT
+                                    ? frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2]
+                                    : 0.0f;
+            const bool above_base =
+                i < LED_COUNT && hat_led_height(i) / HAT_ROW_PITCH_CELLS - 0.5f >= 1.0f;
+            if (light > 0.0f && above_base) {
+                const float d = fmodf(hat_led_angle(i) + yaw - centre + 3.0f * PI, 2.0f * PI) - PI;
+                TEST_ASSERT_LESS_THAN_FLOAT(PI / SPECTRUM_BANDS + led, fabsf(d));
+                sum += sqrtf(light) * d;
+                weight += sqrtf(light);
+            } else if (weight > 0.0f) {
+                TEST_ASSERT_FLOAT_WITHIN(0.1f * led, 0.0f, sum / weight);
+                passes++;
+                sum = weight = 0.0f;
             }
-            const float d = fmodf(hat_led_angle(i) + yaw - centre + 3.0f * PI, 2.0f * PI) - PI;
-            TEST_ASSERT_LESS_THAN_FLOAT(PI / SPECTRUM_BANDS + led, fabsf(d));
-            sum[(int)turn] += light * d;
-            weight[(int)turn] += light;
         }
-        for (int t = 1; t < (int)HAT_TURNS; t++) {
-            TEST_ASSERT_GREATER_THAN_FLOAT(0.0f, weight[t]);
-            TEST_ASSERT_FLOAT_WITHIN(0.2f * led, 0.0f, sum[t] / weight[t]);
-        }
+        TEST_ASSERT_GREATER_OR_EQUAL_INT((int)HAT_TURNS - 1, passes);
     }
 }
 

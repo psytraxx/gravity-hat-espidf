@@ -13,7 +13,7 @@ Hold the hat upside down for two seconds and it changes mode:
 |---|---|
 | Fluid | The liquid in the hat |
 | Fire | Flames that always burn upwards in the room, whichever way the hat is tilted; each beat and each jolt throws them up the hat, and in free fall they stall |
-| Spectrum | The sound's spectrum as 16 bars round the hat, bass to treble, fixed in the room: turn your head and the bars stay where they are while the hat turns under them |
+| Spectrum | The sound's spectrum as 12 bars round the hat, bass to treble, fixed in the room: turn your head and the bars stay where they are while the hat turns under them |
 
 A white arc grows round the brim while the hat is held upside down, and
 the next mode comes on when it closes. Turn the hat back the right way
@@ -313,7 +313,7 @@ flowchart LR
     IMU --> MF[motion filter]
     TAP -->|double tap: random hue| FB
     MIC[I2S microphone<br/>core 1, 16 kHz] -->|loudness| PULSE[pulse tracker]
-    MIC -->|FFT, 16 bands| METER[spectrum meter]
+    MIC -->|FFT, 12 bands| METER[spectrum meter]
     METER --> FB
     MF -->|gravity| HEAD[heading]
     IMU -->|gyro| HEAD
@@ -407,7 +407,7 @@ no more than the fluid's 60/255 a LED.
 
 **Spectrum.** The microphone task keeps the latest 512 samples (32 ms)
 and, for every 20 ms it reads, takes their FFT through a Hann window and
-sums the power into 16 bands spaced evenly in pitch from 60 Hz to
+sums the power into 12 bands spaced evenly in pitch from 60 Hz to
 7 kHz. Each band has its own floor, the quiet in that band, which drops
 at once and creeps up 3 dB a second, so a hum or the steady bass under
 music sinks back; the loudest band over its floor sets one shared peak,
