@@ -15,10 +15,14 @@
  * cooling takes away; both at no sound. */
 #define FIRE_KEEP 0.95f
 #define FIRE_COOL 0.09f
-/* Full sound keeps this much more heat a step and burns this much more
- * fuel. */
-#define FIRE_STOKE_KEEP 0.05f
-#define FIRE_STOKE_FUEL 0.35f
+/* A full pulse of sound (a beat) keeps this much more heat a step, takes
+ * this share off the random cooling, makes the gas rise this much faster
+ * (as a share of FIRE_RISE) and adds this much fuel, so each beat throws
+ * the flames up the hat. */
+#define FIRE_STOKE_KEEP 0.02f
+#define FIRE_STOKE_COOL 0.7f
+#define FIRE_STOKE_RISE 1.5f
+#define FIRE_STOKE_FUEL 0.6f
 /* Share of a column's fuel flicker replaced by a new random value each
  * step. */
 #define FIRE_FLICKER 0.35f
@@ -28,7 +32,13 @@
 /* Share of the heat spread to the columns either side each step. */
 #define FIRE_SPREAD 0.1f
 /* Share of a new reading of up folded in each step. */
-#define FIRE_UP_SMOOTHING 0.25f
+#define FIRE_UP_SMOOTHING 0.4f
+/* The flames rise as fast as the acceleration the hat feels, in g, up to
+ * this much: pressed upwards they shoot higher, in free fall they stall. */
+#define FIRE_MAX_G 2.5f
+/* A change in acceleration of this much in g from one step to the next
+ * (a jolt, a shake) fans the fire like a full beat. */
+#define FIRE_FAN_G 0.8f
 /* Heat below this stays dark. */
 #define FIRE_DARK 0.06f
 
@@ -73,12 +83,19 @@ static float fuel_at(const fire_t *f, float x)
     return f->fuel[c] * (1.0f - t) + f->fuel[wrap_col(c + 1)] * t;
 }
 
+/* Heat of the fuel bed at flicker `fuel`, stoked by `boost`: every
+ * column flares, the ones burning strongly the most. */
+static float bed(float fuel, float boost)
+{
+    return fuel + boost * (0.25f + fuel);
+}
+
 /* Heat at fractional column `x` and row `y`. Past the bottom or the top
- * row the fuel bed burns at `bed`. */
-static float sample(const fire_t *f, float x, float y, float bed)
+ * row the fuel bed burns. */
+static float sample(const fire_t *f, float x, float y, float boost)
 {
     if (y < -0.5f || y > FIRE_ROWS - 0.5f) {
-        return bed * fuel_at(f, x);
+        return bed(fuel_at(f, x), boost);
     }
     const float x0 = floorf(x);
     const float tx = x - x0;
@@ -94,22 +111,32 @@ static float sample(const fire_t *f, float x, float y, float bed)
 
 void fire_step(fire_t *f, vec3_t accel, float stoke)
 {
+    /* Squared, so the beat itself throws the flames up and the pulse's
+     * fading tail lets them fall back. */
     stoke = clampf(stoke, 0.0f, 1.0f);
+    stoke *= stoke;
+    /* A jolt fans the fire as a beat does. */
+    const vec3_t lift = v3_scale(accel, -1.0f);
+    const float fan = clampf(v3_len(v3_sub(lift, f->lift)) / FIRE_FAN_G, 0.0f, 1.0f);
+    stoke = fmaxf(stoke, fan);
     /* Smoothed before it is made a unit vector, so a flip turns it over
      * too. */
-    f->lift = v3_add(f->lift, v3_scale(v3_sub(v3_scale(accel, -1.0f), f->lift), FIRE_UP_SMOOTHING));
+    f->lift = v3_add(f->lift, v3_scale(v3_sub(lift, f->lift), FIRE_UP_SMOOTHING));
     const float len = v3_len(f->lift);
     if (len > 1e-3f) {
         f->up = v3_scale(f->lift, 1.0f / len);
     }
     const vec3_t up = f->up;
+    const float buoyancy = fminf(len, FIRE_MAX_G);
 
     for (int c = 0; c < FIRE_COLS; c++) {
         /* Squared, so a few columns flare and the rest smoulder. */
         const float r = rnd(f);
         f->fuel[c] += (r * r * 1.4f - f->fuel[c]) * FIRE_FLICKER;
     }
-    const float bed = 1.0f + FIRE_STOKE_FUEL * stoke;
+    const float boost = FIRE_STOKE_FUEL * stoke;
+    const float cool = FIRE_COOL * (1.0f - FIRE_STOKE_COOL * stoke);
+    const float rise_speed = FIRE_RISE * buoyancy * (1.0f + FIRE_STOKE_RISE * stoke);
 
     /* The wall's lowest point in the room: its height along up. */
     float lowest = INFINITY;
@@ -135,19 +162,19 @@ void fire_step(fire_t *f, vec3_t accel, float stoke)
             float round = -up.x * sa + up.y * ca;
             float rise = up.z;
             const float along = sqrtf(round * round + rise * rise);
-            const float speed = along > 1e-3f ? FIRE_RISE / sqrtf(along) : 0.0f;
+            const float speed = along > 1e-3f ? rise_speed / sqrtf(along) : 0.0f;
             round *= speed;
             rise *= speed;
             /* Where this point's gas was a step ago. */
             const float x = c - round / (TWO_PI * rad) * FIRE_COLS;
             const float y = r - rise / ROW_H;
-            float h = sample(f, x, y, bed);
+            float h = sample(f, x, y, boost);
 
             const float height = rad * (up.x * ca + up.y * sa) + up.z * z - lowest;
             if (height < FIRE_LOW_BAND) {
-                h = fmaxf(h, bed * f->fuel[c] * (1.0f - height / FIRE_LOW_BAND));
+                h = fmaxf(h, bed(f->fuel[c], boost) * (1.0f - height / FIRE_LOW_BAND));
             }
-            h = h * keep - FIRE_COOL * rnd(f);
+            h = h * keep - cool * rnd(f);
             f->next[r][c] = h > 0.0f ? h : 0.0f;
         }
     }
@@ -162,7 +189,8 @@ void fire_step(fire_t *f, vec3_t accel, float stoke)
 
 float fire_heat_at(const fire_t *f, float a, float z)
 {
-    return sample(f, a / TWO_PI * FIRE_COLS, z / ROW_H - 0.5f, 0.0f);
+    const float y = clampf(z / ROW_H - 0.5f, 0.0f, FIRE_ROWS - 1.0f);
+    return sample(f, a / TWO_PI * FIRE_COLS, y, 0.0f);
 }
 
 color_t fire_color(float h)
