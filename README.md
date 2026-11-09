@@ -13,6 +13,7 @@ Hold the hat upside down for two seconds and it changes mode:
 |---|---|
 | Fluid | The liquid in the hat |
 | Fire | Flames that always burn upwards in the room, whichever way the hat is tilted; loud sound stokes them |
+| Spectrum | The sound's spectrum as 16 bars round the hat, bass to treble, fixed in the room: turn your head and the bars stay where they are while the hat turns under them |
 
 A white arc grows round the brim while the hat is held upside down, and
 the next mode comes on when it closes. Turn the hat back the right way
@@ -299,6 +300,11 @@ flowchart LR
     IMU --> MF[motion filter]
     TAP -->|double tap: random hue| FB
     MIC[I2S microphone<br/>core 1, 16 kHz] -->|loudness| PULSE[pulse tracker]
+    MIC -->|FFT, 16 bands| METER[spectrum meter]
+    METER --> FB
+    MF -->|gravity| HEAD[heading]
+    IMU -->|gyro| HEAD
+    HEAD -->|bars fixed in the room| FB
     PULSE -->|brightness| FB
     MF -->|gravity + amplified motion| FX[fluid step]
     IMU -->|gyro, integrated| FX
@@ -308,7 +314,7 @@ flowchart LR
     MF -->|room's up| FIRE[fire step]
     PULSE -->|stoke| FIRE
     FIRE --> FB
-    FX --> FB[frame builder:<br/>density or heat behind each LED]
+    FX --> FB[frame builder:<br/>density, heat or bars behind each LED]
     FB -->|queue| LED[LED task<br/>core 1, led_strip]
 ```
 
@@ -375,6 +381,26 @@ lick up and break off. The sound's pulse adds fuel and slows the
 cooling. Heat runs from dark through deep red to orange and yellow, at
 no more than the fluid's 60/255 a LED.
 
+**Spectrum.** The microphone task keeps the latest 512 samples (32 ms)
+and, for every 20 ms it reads, takes their FFT through a Hann window and
+sums the power into 16 bands spaced evenly in pitch from 60 Hz to
+7 kHz. Each band has its own floor, the quiet in that band, which drops
+at once and creeps up 3 dB a second, so a hum or the steady bass under
+music sinks back; the loudest band over its floor sets one shared peak,
+which jumps up and sinks 6 dB a second. A bar jumps to its band's place
+between floor and peak and falls 1.5 hat heights a second; a white mark
+holds its highest point for 0.4 s, then falls too. The bars stand round
+the hat in rainbow order, red bass to violet treble, counter-clockwise
+seen from above.
+
+They are fixed in the room by the hat's heading: each frame, the part
+of the gyro's rotation about the room's up (against the motion filter's
+gravity) is added up, so turning round moves the heading and tilting or
+nodding does not. The bars are drawn that far back round the hat, so
+the bass stays where LED 0 faced at power on. Nothing corrects the
+heading, so it drifts by the gyro's leftover zero offset, a fraction of
+a degree a second. Without a microphone the bars stay dark.
+
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
 staggered grid of 9 × 9 × 7 cells, each 1.4 LED spacings across, about
 2 rows high (coarser cells would look blockier, finer ones cost too
@@ -414,9 +440,9 @@ than steps.
 | `main/main.c` | Main loop on core 0, LED task on core 1, calibration picture |
 | `main/ota.c` | Wi-Fi, mDNS and the update server on core 1; keeps or rolls back a new image |
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
-| `main/mic.c` | I2S microphone on core 1: the loudness of the latest 20 ms |
+| `main/mic.c` | I2S microphone on core 1: the loudness of the latest 20 ms and the spectrum of the latest 32 ms |
 | `main/ws2812.c` | The strip through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: the hat's numbers (`config.h`) and shape (`shape.h`), modes and the switch between them, fluid, fire, frames, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding and batching |
+| `main/core/` | Everything that needs no hardware: the hat's numbers (`config.h`) and shape (`shape.h`), modes and the switch between them, fluid, fire, spectrum and heading, frames, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding and batching |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 
 ## Tests

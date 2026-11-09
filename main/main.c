@@ -2,7 +2,9 @@
  * spiral, shows the liquid inside. Tilt it and the surface tilts; shake
  * it and the fluid sloshes; its brightness pulses with the sound. Held
  * upside down for two seconds, it moves on to the next mode: fire that
- * burns upwards in the room, stoked by the sound, then the fluid again.
+ * burns upwards in the room, stoked by the sound; the sound's spectrum
+ * standing round the hat, fixed in the room as the hat turns; then the
+ * fluid again.
  *
  * Core 0 (this task) reads the IMU, runs the physics and builds frames;
  * core 1 sends them to the LEDs. The RMT send takes ~15 ms per changed
@@ -18,6 +20,7 @@
 #include "esp_timer.h"
 #include "fire.h"
 #include "fluid.h"
+#include "heading.h"
 #include "imu.h"
 #include "mode.h"
 #include "freertos/FreeRTOS.h"
@@ -28,6 +31,7 @@
 #include "mpu6500.h"
 #include "ota.h"
 #include "sdkconfig.h"
+#include "spectrum.h"
 #include "tap.h"
 #include "ws2812.h"
 
@@ -140,6 +144,10 @@ void app_main(void)
 
     static fire_t fire;
     fire_init(&fire, esp_random() | 1u);
+    spectrum_meter_t meter;
+    spectrum_meter_init(&meter);
+    heading_t heading;
+    heading_init(&heading);
     mode_switch_t modes;
     mode_switch_init(&modes, MODE_FLUID);
     ESP_LOGI(TAG, "Hold the hat upside down for %.0f s to change mode", MODE_HOLD_S);
@@ -196,14 +204,25 @@ void app_main(void)
             pulse = audio_feed(&audio, sound_db, CONFIG_HAT_FRAME_MS / 1000.0f);
             brightness = audio_brightness(&audio);
         }
+#if CONFIG_HAT_MIC
+        if (modes.mode == MODE_SPECTRUM) {
+            float bands[SPECTRUM_BANDS];
+            if (mic_bands(bands)) {
+                spectrum_meter_feed(&meter, bands, CONFIG_HAT_FRAME_MS / 1000.0f);
+            }
+        }
+#endif
 
         /* Only the mode on show runs; the fluid waits where it is while
          * the fire burns, stoked by the sound. */
         const int64_t start = esp_timer_get_time();
         const vec3_t accel = motion_filter_apply(&motion, imu.accel, imu.rotation);
+        heading_feed(&heading, imu.rotation, motion.gravity);
         switch (modes.mode) {
         case MODE_FIRE:
             fire_step(&fire, accel, pulse);
+            break;
+        case MODE_SPECTRUM:
             break;
         default:
             fluid_set_rotation(&fluid, imu.rotation);
@@ -215,6 +234,9 @@ void app_main(void)
         switch (modes.mode) {
         case MODE_FIRE:
             fire_frame(&fire, &frame);
+            break;
+        case MODE_SPECTRUM:
+            spectrum_frame(&meter, heading.yaw, &frame);
             break;
         default:
             hat_view_frame(&view, &fluid, hue, brightness, &frame);
