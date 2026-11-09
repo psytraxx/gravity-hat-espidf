@@ -27,6 +27,13 @@ to the fluid](docs/modes-fire.gif)
 set of tilts and a beat for the sound: the hat on the left, the strip
 unrolled on the right.*
 
+![The spectrum's bars standing still in the room while the hat turns
+left and right, nods and spins round under them](docs/spectrum.gif)
+
+*The spectrum mode to music, rendered the same way: as the hat turns,
+the bars keep their place on the left, and on the unrolled strip they
+move round the other way.*
+
 It runs on an ESP32-WROOM-32 with an MPU-6500 IMU and an I2S
 microphone, and is written in C for ESP-IDF 6.1. The physics is a port
 of the fluid solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
