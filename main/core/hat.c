@@ -81,6 +81,21 @@ void hat_view_frame(hat_view_t *v, const fluid_t *f, uint32_t hue, float brightn
     }
 }
 
+static const color_t PROGRESS = {20, 20, 20};
+
+void hat_progress_overlay(frame_t *frame, float progress)
+{
+    if (progress <= 0.0f) {
+        return;
+    }
+    /* The brim's turn: the first one, or the last with HAT_START_AT_TOP. */
+    const int turn = (int)lrintf(HAT_LEDS_PER_TURN_BOTTOM);
+    const int lit = (int)lrintf(clampf(progress, 0.0f, 1.0f) * turn);
+    for (int k = 0; k < lit; k++) {
+        frame_set_led(frame, HAT_START_AT_TOP ? LED_COUNT - 1 - k : k, PROGRESS);
+    }
+}
+
 /* Calibration colours, at about the fluid's brightness. */
 static const color_t CAL_LINES[4] = {{60, 0, 0}, {0, 60, 0}, {0, 0, 60}, {30, 30, 0}};
 static const color_t CAL_DOWN = {20, 20, 20};

@@ -7,6 +7,17 @@ side and the fluid runs along the low side. Its brightness pulses with
 the sound around it, and a double tap gives the fluid a new, random
 colour.
 
+Hold the hat upside down for two seconds and it changes mode:
+
+| Mode | |
+|---|---|
+| Fluid | The liquid in the hat |
+| Fire | Flames that always burn upwards in the room, whichever way the hat is tilted; loud sound stokes them |
+
+A white arc grows round the brim while the hat is held upside down, and
+the next mode comes on when it closes. Turn the hat back the right way
+up before the next change; after the last mode comes the fluid again.
+
 It runs on an ESP32-WROOM-32 with an MPU-6500 IMU and an I2S
 microphone, and is written in C for ESP-IDF 6.1. The physics is a port
 of the fluid solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
@@ -283,7 +294,13 @@ flowchart LR
     PULSE -->|brightness| FB
     MF -->|gravity + amplified motion| FX[fluid step]
     IMU -->|gyro, integrated| FX
-    FX --> FB[frame builder:<br/>density behind each LED]
+    IMU -->|upside down 2 s| MODE[mode switch]
+    MODE --> FX
+    MODE --> FIRE
+    MF -->|room's up| FIRE[fire step]
+    PULSE -->|stoke| FIRE
+    FIRE --> FB
+    FX --> FB[frame builder:<br/>density or heat behind each LED]
     FB -->|queue| LED[LED task<br/>core 1, led_strip]
 ```
 
@@ -327,6 +344,29 @@ counts in full. The pulse jumps to that share at once and fades with a
 flashes the fluid, steady noise settles back to dim within seconds, and
 beats over loud music still pulse.
 
+**Modes.** Each frame the mean acceleration says whether the hat is
+upside down: gravity more than 0.7 g towards its crown, within about
+45° of crown down. Two seconds of that in a row switch to the next
+mode; the hat then has to point at least 0.3 g the right way up again
+before it can switch once more, so holding it upside down for longer
+switches only once. Only the mode on show runs; the fluid waits where it
+is while the fire burns.
+
+**Fire.** Heat lives on a grid of 40 × 28 points wrapped round the
+hat's wall. Each step it is carried along the wall the way the room's up
+runs there: up (against the motion filter's acceleration, smoothed) is
+projected onto the wall, so upright the flames climb from the brim,
+tilted they lean round towards the high side, and upside down they climb
+from the crown towards the brim. Where the wall leans, the gas still
+rises at the square root of its share of the speed, so on a hat lying on
+its side the flames get away from the low side and rise round it both
+ways. Fuel burns past the wall's edge the gas comes in from and along
+the wall's lowest part in the room, with a random flicker per column;
+the heat then loses a share and a random amount each step, so flames
+lick up and break off. The sound's pulse adds fuel and slows the
+cooling. Heat runs from dark through deep red to orange and yellow, at
+no more than the fluid's 60/255 a LED.
+
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
 staggered grid of 9 × 9 × 7 cells, each 1.4 LED spacings across, about
 2 rows high (coarser cells would look blockier, finer ones cost too
@@ -368,7 +408,7 @@ than steps.
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
 | `main/mic.c` | I2S microphone on core 1: the loudness of the latest 20 ms |
 | `main/ws2812.c` | The strip through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: the hat's numbers (`config.h`) and shape (`shape.h`), fluid, frames, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding and batching |
+| `main/core/` | Everything that needs no hardware: the hat's numbers (`config.h`) and shape (`shape.h`), modes and the switch between them, fluid, fire, frames, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding and batching |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 
 ## Tests

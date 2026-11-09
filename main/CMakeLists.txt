@@ -1,6 +1,6 @@
 idf_component_register(
     SRCS "main.c" "mic.c" "mpu6500.c" "ota.c" "ws2812.c"
-         "core/audio.c" "core/hat.c" "core/color.c" "core/fluid.c" "core/frame.c" "core/imu.c" "core/motion.c" "core/mpu6500_decode.c"
+         "core/audio.c" "core/hat.c" "core/color.c" "core/fire.c" "core/fluid.c" "core/frame.c" "core/imu.c" "core/mode.c" "core/motion.c" "core/mpu6500_decode.c"
          "core/tap.c"
     INCLUDE_DIRS "." "core"
     REQUIRES esp_driver_spi esp_driver_i2s esp_driver_gpio esp_timer log freertos
@@ -8,5 +8,5 @@ idf_component_register(
 )
 # The physics dominates frame time; optimise the core for speed.
 set_source_files_properties(
-    core/fluid.c core/motion.c
+    core/fire.c core/fluid.c core/motion.c
     PROPERTIES COMPILE_OPTIONS "-O2")
