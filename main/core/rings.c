@@ -58,7 +58,9 @@ void rings_step(rings_t *r, vec3_t gravity, float pulse, float hue)
             }
         }
         r->height[slot] = r->low - RING_WIDTH;
-        r->hue[slot] = hue;
+        r->colour[slot] = r->next;
+        r->palette[r->next] = hue;
+        r->next ^= 1;
         r->strength[slot] = fminf(1.0f, pulse);
     }
 }
@@ -81,7 +83,8 @@ void rings_frame(const rings_t *r, frame_t *frame)
             }
             const float climbed = clampf((r->height[k] - r->low) / span, 0.0f, 1.0f);
             const float a = expf(-d * d) * r->strength[k] * (1.0f - (1.0f - RING_TOP) * climbed);
-            const float hue = fmodf(fmodf(r->hue[k], 360.0f) + 360.0f, 360.0f);
+            const float h = r->palette[r->colour[k]];
+            const float hue = fmodf(fmodf(h, 360.0f) + 360.0f, 360.0f);
             const color_t c = color_from_hue((uint32_t)lrintf(hue));
             rgb[0] += a * c.r;
             rgb[1] += a * c.g;

@@ -51,8 +51,10 @@ to the beat, and turned blue by a double tap](docs/fire-motion.gif)
 
 ### Rings
 
-Each beat sends a ring of light up the hat in the colour of the loudest
-frequency band, always level with the floor however the hat is tilted.
+Each beat sends a ring of light up the hat, always level with the floor
+however the hat is tilted. The rings show two colours at a time; each
+beat takes the colour of the loudest frequency band for one of the two,
+so the colours change one at a time.
 
 ![Rings rising up the hat on every beat, staying level with the floor
 while the hat tilts and rolls, their colours turned by a double
@@ -466,10 +468,13 @@ bands.
 **Rings.** A beat is the sound's pulse jumping a quarter or more above
 its lowest point since the last beat, at most one every 0.15 s: loud
 music never lets the pulse fall far, but each beat still jumps out of
-it. A beat starts a ring at the hat's lowest point in the room, in the
-colour of the loudest spectrum band at that moment, turned as far round
-the wheel as the double taps have turned the fluid, and as strong as the
-pulse. Each LED lights by how close its height in the room (its
+it. A beat starts a ring at the hat's lowest point in the room, as
+strong as the pulse. The rings take turns between the two colours of a
+palette; each beat sets its colour to the loudest spectrum band's at
+that moment, turned as far round the wheel as the double taps have
+turned the fluid, and the rings in flight in that colour change with it.
+So the hat shows two colours at most, and each beat changes one of them
+at most. Each LED lights by how close its height in the room (its
 place on the wall, along the motion filter's up) is to each ring, so the
 rings stay level whichever way the hat is tilted. A ring rises 0.12 to
 0.24 cells a step, louder ones faster and thicker, dims to a third as it

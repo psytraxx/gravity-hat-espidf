@@ -116,6 +116,53 @@ static void test_hue_wraps(void)
     TEST_ASSERT_EQUAL_INT(green[0], green[1]);
 }
 
+/* Count the distinct colours lit, at full saturation's hue, to within a
+ * few degrees: the hues of the LEDs brighter than a fifth. */
+static int colours_lit(void)
+{
+    float seen[RINGS_MAX * 2];
+    int n = 0;
+    for (int i = 0; i < LED_COUNT; i++) {
+        const int sum = light(i);
+        if (sum < FLUID_LEVEL / 5) {
+            continue;
+        }
+        /* The hue's place between red, green and blue, by share. */
+        const float key = (frame.rgb[3 * i + 1] + 2.0f * frame.rgb[3 * i + 2]) / sum;
+        int known = 0;
+        for (int k = 0; k < n; k++) {
+            known |= fabsf(seen[k] - key) < 0.08f;
+        }
+        if (!known && n < RINGS_MAX * 2) {
+            seen[n++] = key;
+        }
+    }
+    return n;
+}
+
+/* Four beats in four colours: never more than two colours at once, and
+ * each beat keeps one of the two that were there. */
+static void test_two_colours_at_most(void)
+{
+    rings_init(&r);
+    const float hues[4] = {0.0f, 120.0f, 240.0f, 60.0f};
+    for (int b = 0; b < 4; b++) {
+        rings_step(&r, DOWN, 0.0f, hues[b]);
+        rings_step(&r, DOWN, 1.0f, hues[b]);
+        for (int i = 0; i < RINGS_GAP; i++) {
+            rings_step(&r, DOWN, 0.0f, hues[b]);
+            rings_frame(&r, &frame);
+            TEST_ASSERT_LESS_OR_EQUAL_INT(2, colours_lit());
+        }
+        if (b > 0) {
+            /* The palette holds this beat's colour and the last one's. */
+            const float a = r.palette[0], c = r.palette[1];
+            TEST_ASSERT_TRUE((a == hues[b] && c == hues[b - 1]) ||
+                             (c == hues[b] && a == hues[b - 1]));
+        }
+    }
+}
+
 /* A held loud sound is one beat; it has to drop before the next. */
 static void test_one_ring_per_beat(void)
 {
@@ -179,6 +226,7 @@ int main(void)
     RUN_TEST(test_beat_ring_rises);
     RUN_TEST(test_ring_is_level);
     RUN_TEST(test_hue_wraps);
+    RUN_TEST(test_two_colours_at_most);
     RUN_TEST(test_one_ring_per_beat);
     RUN_TEST(test_beats_over_loud_music);
     RUN_TEST(test_power);
