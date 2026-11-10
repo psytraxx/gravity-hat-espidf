@@ -74,15 +74,17 @@ config HAT_IMU_YAW_DEG
 menu "Microphone"
 
 config HAT_MIC
-    bool "Pulse the brightness with the sound"
+    bool "Listen to the sound"
     default y
     help
-        Read an I2S microphone (INMP441 or alike) and pulse the fluid's
-        brightness with the sound: dim in the quiet, full on a loud
-        sound, fading after it. The firmware follows both the quiet and
-        the loud parts, so beats pulse in a quiet room and over loud
+        Read an I2S microphone (INMP441 or alike). The sound pulses the
+        fluid's brightness (dim in the quiet, full on a loud sound,
+        fading after it), stokes the fire, sends up the rings in the
+        colour of the loudest band, makes the stars twinkle and strikes
+        the storm's lightning. The firmware follows both the quiet and
+        the loud parts, so beats show in a quiet room and over loud
         music alike. Without a microphone sending, the fluid stays at
-        full brightness.
+        full brightness and the other modes run without the sound.
 
 config HAT_MIC_SD
     int "Microphone SD (data) GPIO"

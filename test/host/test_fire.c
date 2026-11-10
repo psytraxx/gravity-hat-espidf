@@ -118,8 +118,8 @@ static float heat_round(float z)
     return sum / 32.0f;
 }
 
-/* A beat throws the flames up to the crown within a few steps, and they
- * fall back once it fades. */
+/* A beat throws the flames up near the crown within a fifth of a second,
+ * and they fall back once it fades. */
 static void test_beat_throws_flames_up(void)
 {
     fire_init(&f, 11);
@@ -127,8 +127,8 @@ static void test_beat_throws_flames_up(void)
     run(down, 0.0f, 200);
     const float z = HAT_HEIGHT * 0.85f;
     TEST_ASSERT_LESS_THAN_FLOAT(0.05f, heat_round(z));
-    run(down, 1.0f, 8);
-    TEST_ASSERT_GREATER_THAN_FLOAT(0.3f, heat_round(z));
+    run(down, 1.0f, 12);
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.2f, heat_round(z));
     run(down, 0.0f, 30);
     TEST_ASSERT_LESS_THAN_FLOAT(0.05f, heat_round(z));
 }
@@ -167,11 +167,11 @@ static void test_jolt_fans_the_fire(void)
     run(down, 0.0f, 200);
     const float z = HAT_HEIGHT * 0.85f;
     TEST_ASSERT_LESS_THAN_FLOAT(0.05f, heat_round(z));
-    /* Shaken side to side, 1 g each way, for 8 steps. */
-    for (int i = 0; i < 8; i++) {
+    /* Shaken side to side, 1 g each way, for 12 steps. */
+    for (int i = 0; i < 12; i++) {
         fire_step(&f, v3(i % 2 ? 1.0f : -1.0f, 0.0f, -1.0f), 0.0f);
     }
-    TEST_ASSERT_GREATER_THAN_FLOAT(0.3f, heat_round(z));
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.2f, heat_round(z));
 }
 
 /* Shoved towards +x, the flames lean towards +x at once, into the
@@ -191,18 +191,36 @@ static void test_shove_leans_the_flames(void)
  * power than the fluid. */
 static void test_colours(void)
 {
-    const color_t cold = fire_color(0.0f);
+    const color_t cold = fire_color(0.0f, 0.0f);
     TEST_ASSERT_EQUAL_UINT8(0, cold.r + cold.g + cold.b);
-    const color_t warm = fire_color(0.4f);
+    const color_t warm = fire_color(0.4f, 0.0f);
     TEST_ASSERT_GREATER_THAN_UINT8(0, warm.r);
     TEST_ASSERT_EQUAL_UINT8(0, warm.g);
-    const color_t hot = fire_color(1.0f);
+    const color_t hot = fire_color(1.0f, 0.0f);
     TEST_ASSERT_GREATER_THAN_UINT8(hot.g, hot.r);
     TEST_ASSERT_GREATER_THAN_UINT8(10, hot.g);
     for (int i = 0; i <= 100; i++) {
-        const color_t c = fire_color(i / 100.0f);
+        const color_t c = fire_color(i / 100.0f, 0.0f);
         TEST_ASSERT_LESS_OR_EQUAL_INT(FLUID_LEVEL, c.r + c.g + c.b);
         TEST_ASSERT_EQUAL_UINT8(0, c.b);
+    }
+}
+
+/* A double tap's shift turns the flames round the colour wheel: a third
+ * of a turn makes them green, a turn back where they were. */
+static void test_shifted_colours(void)
+{
+    const color_t green = fire_color(0.4f, 120.0f);
+    TEST_ASSERT_EQUAL_UINT8(0, green.r);
+    TEST_ASSERT_GREATER_THAN_UINT8(0, green.g);
+    for (int i = 0; i <= 10; i++) {
+        const color_t a = fire_color(i / 10.0f, 0.0f);
+        const color_t b = fire_color(i / 10.0f, -360.0f);
+        TEST_ASSERT_EQUAL_UINT8(a.r, b.r);
+        TEST_ASSERT_EQUAL_UINT8(a.g, b.g);
+        TEST_ASSERT_EQUAL_UINT8(a.b, b.b);
+        const color_t c = fire_color(i / 10.0f, 200.0f);
+        TEST_ASSERT_LESS_OR_EQUAL_INT(FLUID_LEVEL, c.r + c.g + c.b);
     }
 }
 
@@ -212,7 +230,7 @@ static void test_frame_follows_heat(void)
     fire_init(&f, 7);
     run(v3(0.0f, 0.0f, -1.0f), 0.0f, 100);
     static frame_t frame;
-    fire_frame(&f, &frame);
+    fire_frame(&f, 0.0f, &frame);
     int lit_low = 0, lit_high = 0;
     for (int i = 0; i < LED_COUNT; i++) {
         const int sum = frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2];
@@ -241,6 +259,7 @@ int main(void)
     RUN_TEST(test_jolt_fans_the_fire);
     RUN_TEST(test_shove_leans_the_flames);
     RUN_TEST(test_colours);
+    RUN_TEST(test_shifted_colours);
     RUN_TEST(test_frame_follows_heat);
     return UNITY_END();
 }

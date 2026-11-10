@@ -15,7 +15,9 @@
 typedef enum {
     MODE_FLUID,
     MODE_FIRE,
-    MODE_SPECTRUM,
+    MODE_RINGS,
+    MODE_SKY,
+    MODE_STORM,
     MODE_COUNT,
 } hat_mode_t;
 

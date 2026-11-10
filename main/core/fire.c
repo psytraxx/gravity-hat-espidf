@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "color.h"
 #include "hat.h"
 #include "shape.h"
 
@@ -20,9 +21,9 @@
  * (as a share of FIRE_RISE) and adds this much fuel, so each beat throws
  * the flames up the hat. */
 #define FIRE_STOKE_KEEP 0.02f
-#define FIRE_STOKE_COOL 0.7f
-#define FIRE_STOKE_RISE 1.5f
-#define FIRE_STOKE_FUEL 0.6f
+#define FIRE_STOKE_COOL 0.5f
+#define FIRE_STOKE_RISE 0.9f
+#define FIRE_STOKE_FUEL 0.4f
 /* Share of a column's fuel flicker replaced by a new random value each
  * step. */
 #define FIRE_FLICKER 0.35f
@@ -38,7 +39,7 @@
 #define FIRE_MAX_G 2.5f
 /* A change in acceleration of this much in g from one step to the next
  * (a jolt, a shake) fans the fire like a full beat. */
-#define FIRE_FAN_G 0.8f
+#define FIRE_FAN_G 1.2f
 /* Heat below this stays dark. */
 #define FIRE_DARK 0.06f
 
@@ -193,27 +194,35 @@ float fire_heat_at(const fire_t *f, float a, float z)
     return sample(f, a / TWO_PI * FIRE_COLS, y, 0.0f);
 }
 
-color_t fire_color(float h)
+/* Hue the hottest heat turns to, past the base hue: red to yellow. */
+#define FIRE_HOT_HUE 54.0f
+
+color_t fire_color(float h, float shift)
 {
     h = clampf(h, 0.0f, 1.0f);
     if (h < FIRE_DARK) {
         return (color_t){0, 0, 0};
     }
-    /* Red rises to full power by half heat; past it, green takes over a
-     * share of the same power, from red to orange to yellow. */
-    const float level = FLUID_LEVEL;
+    /* The base hue (red, unshifted) rises to full power by half heat;
+     * past it, the hue turns towards FIRE_HOT_HUE further on: from red to
+     * orange to yellow. */
+    float hue = shift;
+    float level = 1.0f;
     if (h < 0.5f) {
         const float t = (h - FIRE_DARK) / (0.5f - FIRE_DARK);
-        return (color_t){(uint8_t)(level * (0.08f + 0.92f * t * t) + 0.5f), 0, 0};
+        level = 0.08f + 0.92f * t * t;
+    } else {
+        hue += FIRE_HOT_HUE * (h - 0.5f) / 0.5f;
     }
-    const uint8_t g = (uint8_t)(level * 0.45f * (h - 0.5f) / 0.5f + 0.5f);
-    return (color_t){(uint8_t)(FLUID_LEVEL - g), g, 0};
+    const float wrapped = fmodf(fmodf(hue, 360.0f) + 360.0f, 360.0f);
+    return color_scale(color_from_hue((uint32_t)lrintf(wrapped)), level);
 }
 
-void fire_frame(const fire_t *f, frame_t *frame)
+void fire_frame(const fire_t *f, float shift, frame_t *frame)
 {
     frame_clear(frame);
     for (int i = 0; i < LED_COUNT; i++) {
-        frame_set_led(frame, i, fire_color(fire_heat_at(f, hat_led_angle(i), hat_led_height(i))));
+        const float h = fire_heat_at(f, hat_led_angle(i), hat_led_height(i));
+        frame_set_led(frame, i, fire_color(h, shift));
     }
 }

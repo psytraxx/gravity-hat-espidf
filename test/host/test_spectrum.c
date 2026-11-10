@@ -1,7 +1,5 @@
 #include <math.h>
-#include <stdbool.h>
 
-#include "hat.h"
 #include "spectrum.h"
 #include "unity.h"
 
@@ -70,7 +68,7 @@ static void test_tone_lands_in_its_band(void)
 }
 
 /* Quiet, then a tone: its bar jumps up and the rest stay down; then
- * quiet again, and the bar falls while its peak mark holds a moment. */
+ * quiet again, and the bar falls. */
 static void test_meter_bars(void)
 {
     spectrum_meter_t m;
@@ -98,12 +96,10 @@ static void test_meter_bars(void)
         spectrum_meter_feed(&m, quiet, DT);
     }
     TEST_ASSERT_FLOAT_WITHIN(0.02f, 1.0f - 10 * DT * SPECTRUM_FALL, m.bar[5]);
-    TEST_ASSERT_EQUAL_FLOAT(1.0f, m.mark[5]);
     for (int i = 0; i < 100; i++) {
         spectrum_meter_feed(&m, quiet, DT);
     }
     TEST_ASSERT_EQUAL_FLOAT(0.0f, m.bar[5]);
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, m.mark[5]);
 }
 
 /* A steady level settles: the floor creeps up to it and its bar sinks. */
@@ -121,109 +117,21 @@ static void test_steady_hum_settles(void)
     TEST_ASSERT_EQUAL_FLOAT(0.0f, m.bar[0]);
 }
 
-/* Light of the frame (channels added up) on LEDs from `lo` to `hi` of the
- * hat's height. */
-static float light_between(const spectrum_meter_t *m, float lo, float hi)
-{
-    static frame_t frame;
-    spectrum_frame(m, 0.0f, &frame);
-    float sum = 0.0f;
-    for (int i = 0; i < LED_COUNT; i++) {
-        const float up = hat_led_height(i) / HAT_HEIGHT;
-        if (up >= lo && up < hi) {
-            sum += frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2];
-        }
-    }
-    return sum;
-}
-
-/* One full bar stands in the same place in the room whichever way the
- * hat faces, and straight: on every turn above the base, its light, as
- * the eye sees it, is centred on the bar's angle to within a tenth of an
- * LED, though the LEDs of one turn do not sit above those of the next. */
-static void test_bars_stand_straight_in_the_room(void)
+/* The loudest band, the treble and each band's hue. */
+static void test_helpers(void)
 {
     spectrum_meter_t m;
     spectrum_meter_init(&m);
-    m.bar[0] = 1.0f;
-    const float centre = PI / SPECTRUM_BANDS;
-    const float led = 2.0f * PI / HAT_LEDS_PER_TURN_BOTTOM;
-    static frame_t frame;
-    for (int k = 0; k < 16; k++) {
-        const float yaw = k * 0.41f;
-        spectrum_frame(&m, yaw, &frame);
-        /* Each pass of the spiral through the bar is a run of lit LEDs:
-         * the light-weighted mean of their angles from the centre. The
-         * eye sees about the square root of an LED's power, as the
-         * frame's coverage gamma assumes. */
-        int passes = 0;
-        float sum = 0.0f, weight = 0.0f;
-        for (int i = 0; i <= LED_COUNT; i++) {
-            const float light = i < LED_COUNT
-                                    ? frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2]
-                                    : 0.0f;
-            const bool above_base =
-                i < LED_COUNT && hat_led_height(i) / HAT_ROW_PITCH_CELLS - 0.5f >= 1.0f;
-            if (light > 0.0f && above_base) {
-                const float d = fmodf(hat_led_angle(i) + yaw - centre + 3.0f * PI, 2.0f * PI) - PI;
-                TEST_ASSERT_LESS_THAN_FLOAT(PI / SPECTRUM_BANDS + led, fabsf(d));
-                sum += sqrtf(light) * d;
-                weight += sqrtf(light);
-            } else if (weight > 0.0f) {
-                TEST_ASSERT_FLOAT_WITHIN(0.1f * led, 0.0f, sum / weight);
-                passes++;
-                sum = weight = 0.0f;
-            }
-        }
-        TEST_ASSERT_GREATER_OR_EQUAL_INT((int)HAT_TURNS - 1, passes);
+    m.bar[3] = 0.8f;
+    m.bar[5] = 0.4f;
+    TEST_ASSERT_EQUAL_INT(3, spectrum_loudest(&m));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, spectrum_treble(&m));
+    for (int k = SPECTRUM_BANDS - SPECTRUM_BANDS / 4; k < SPECTRUM_BANDS; k++) {
+        m.bar[k] = 0.6f;
     }
-}
-
-/* A bar lights the hat up to its height, from the brim, and leaves gaps
- * between the bars. */
-static void test_bar_height(void)
-{
-    spectrum_meter_t m;
-    spectrum_meter_init(&m);
-    for (int b = 0; b < SPECTRUM_BANDS; b++) {
-        m.bar[b] = 1.0f;
-    }
-    const float full_low = light_between(&m, 0.2f, 0.45f);
-    const float full_high = light_between(&m, 0.55f, 1.0f);
-    for (int b = 0; b < SPECTRUM_BANDS; b++) {
-        m.bar[b] = 0.5f;
-    }
-    TEST_ASSERT_FLOAT_WITHIN(full_low * 0.02f, full_low, light_between(&m, 0.2f, 0.45f));
-    TEST_ASSERT_EQUAL_FLOAT(0.0f, light_between(&m, 0.55f, 1.0f));
-    /* The bars light less than the whole wall would at full power. */
-    const int leds_high = (int)(LED_COUNT * 0.45f);
-    TEST_ASSERT_LESS_THAN_FLOAT(0.8f * FLUID_LEVEL * leds_high, full_high);
-    TEST_ASSERT_GREATER_THAN_FLOAT(0.4f * FLUID_LEVEL * leds_high, full_high);
-}
-
-/* In silence the bottom turn glows dimly all the way round and nothing
- * above it lights. */
-static void test_silence_shows_the_base(void)
-{
-    spectrum_meter_t m;
-    spectrum_meter_init(&m);
-    static frame_t frame;
-    spectrum_frame(&m, 0.0f, &frame);
-    int base = 0, above = 0;
-    for (int i = 0; i < LED_COUNT; i++) {
-        const int sum = frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2];
-        if (sum == 0) {
-            continue;
-        }
-        TEST_ASSERT_LESS_THAN_INT(FLUID_LEVEL / 2, sum);
-        if (i < (int)HAT_LEDS_PER_TURN_BOTTOM) {
-            base++;
-        } else {
-            above++;
-        }
-    }
-    TEST_ASSERT_GREATER_THAN_INT(HAT_LEDS_PER_TURN_BOTTOM / 2, base);
-    TEST_ASSERT_LESS_THAN_INT(4, above);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.6f, spectrum_treble(&m));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, spectrum_band_hue(0));
+    TEST_ASSERT_GREATER_THAN_FLOAT(spectrum_band_hue(4), spectrum_band_hue(5));
 }
 
 int main(void)
@@ -233,8 +141,6 @@ int main(void)
     RUN_TEST(test_tone_lands_in_its_band);
     RUN_TEST(test_meter_bars);
     RUN_TEST(test_steady_hum_settles);
-    RUN_TEST(test_bars_stand_straight_in_the_room);
-    RUN_TEST(test_bar_height);
-    RUN_TEST(test_silence_shows_the_base);
+    RUN_TEST(test_helpers);
     return UNITY_END();
 }

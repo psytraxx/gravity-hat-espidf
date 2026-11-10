@@ -58,6 +58,12 @@ vec3_t hat_led_pos(int led)
     return v3(FLUID_NX / 2.0f + r * cosf(a), FLUID_NY / 2.0f + r * sinf(a), z);
 }
 
+vec3_t hat_led_offset(int led)
+{
+    const vec3_t p = hat_led_pos(led);
+    return v3(p.x - FLUID_NX / 2.0f, p.y - FLUID_NY / 2.0f, p.z - HAT_HEIGHT / 2.0f);
+}
+
 void hat_view_init(hat_view_t *v)
 {
     memset(v, 0, sizeof *v);
