@@ -51,6 +51,6 @@ int storm_hear(storm_t *s, float level_db);
  * length). */
 void storm_step(storm_t *s, vec3_t gravity);
 
-/* Draw the rain, its colour turned `shift` degrees round the colour wheel
- * (a double tap's change of hue), and the lightning. */
-void storm_frame(const storm_t *s, float shift, frame_t *frame);
+/* Draw the rain, blue, and the lightning, white; a double tap does not
+ * change them. */
+void storm_frame(const storm_t *s, frame_t *frame);

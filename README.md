@@ -18,8 +18,9 @@ mode comes on when it closes; turn the hat back the right way up before
 the next change.
 
 A double tap turns the colours round the colour wheel, by at least 60°
-each time, in every mode but the sky: the fluid takes a new hue, and the
-fire, the rings and the rain turn their own colours as far round.
+each time, in the fluid, the fire and the rings: the fluid takes a new
+hue, and the fire and the rings turn their own colours as far round. The
+sky and the storm keep their own colours.
 
 ![The fluid sloshing, the hat held upside down until the arc closes, then
 fire leaning as the hat tilts, lies on its side and tips
@@ -74,10 +75,10 @@ streaks on a fast spin, and twinkling to the treble](docs/sky.gif)
 
 Rain running down the room over the hat's wall, slanting across it as
 the hat tilts; a loud bang strikes lightning from the crown to the brim.
+The rain stays blue and the lightning white.
 
-![Rain running down the hat's wall, lightning on loud bangs, the rain
-slanting as the hat tilts and turning colour on a double
-tap](docs/storm.gif)
+![Rain running down the hat's wall, lightning on loud bangs, and the
+rain slanting as the hat tilts](docs/storm.gif)
 
 ## Hardware
 
@@ -396,10 +397,10 @@ are found in software on the raw samples: a jump of more than the
 threshold between two samples, after at least 30 ms of stillness, counts
 as a tap; a second tap within 375 ms picks a random hue at least 60°
 from the current one. Shaking never has the stillness, so it does not
-change the colour. The fluid takes the new hue; the fire, the rings and
-the rain turn their own colours as far round the wheel as the fluid's
-has turned from its green at power on, so the fire starts red, orange
-and yellow and the rain blue. The sky keeps its own colours. Every
+change the colour. The fluid takes the new hue; the fire and the rings
+turn their own colours as far round the wheel as the fluid's has turned
+from its green at power on, so the fire starts red, orange and yellow.
+The sky and the storm keep their own colours. Every
 hue's channels add up to 60/255, so the strip draws the same current in
 any colour.
 
@@ -498,14 +499,13 @@ to 80 %, and about once every 1.5 s a gold shooting star crosses.
 **Storm.** 45 drops slide along the wall the way gravity points there
 (the fire's up the other way round), at up to 0.3 cells a step, leaving
 a streak on a 40 × 28 grid wrapped round the wall that loses 45 % a
-step. The rain is blue (hue 215°) at two thirds of the fluid's power,
-turned round the wheel by double taps; the lightning is white. A drop that leaves the wall starts again at the edge the rain
-comes in from, anywhere when the hat lies on its side. A bang is a level
-15 dB or more over its slow average (one second's time constant), at
-most one every 0.36 s: it strikes a jagged bolt along the wall from the
-edge the rain comes in from to the other, with a branch now and then,
-and a faint flash over the whole hat. The bolt flickers and fades
-within a third of a second.
+step. The rain is blue and the lightning white. A drop that leaves the
+wall starts again at the edge the rain comes in from, anywhere when the
+hat lies on its side. A bang is a level 15 dB or more over its slow
+average (one second's time constant), at most one every 0.36 s: it
+strikes a jagged bolt along the wall from the edge the rain comes in
+from to the other, with a branch now and then, and a faint flash over
+the whole hat. The bolt flickers and fades within a third of a second.
 
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
 staggered grid of 9 × 9 × 7 cells, each 1.4 LED spacings across, about

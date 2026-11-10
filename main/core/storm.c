@@ -3,7 +3,6 @@
 #include <math.h>
 #include <string.h>
 
-#include "color.h"
 #include "hat.h"
 #include "shape.h"
 
@@ -21,10 +20,9 @@
 /* Bolt and flash fade per step. */
 #define BOLT_FADE  0.09f
 #define FLASH_KEEP 0.45f
-/* The rain's hue before a double tap turns it, and its share of the
- * fluid's power; the bolt and the flash, white, at full. */
-#define RAIN_HUE   215.0f
-#define RAIN_SHARE 0.67f
+/* Colours at full, each adding up to the fluid's power or less: blue
+ * rain, a white bolt and flash. */
+static const float RAIN_RGB[3] = {4.0f, 10.0f, 26.0f};
 static const float BOLT_RGB[3] = {18.0f, 18.0f, 24.0f};
 static const float FLASH_RGB[3] = {3.0f, 3.0f, 5.0f};
 
@@ -169,12 +167,9 @@ static float sample(const float grid[STORM_ROWS][STORM_COLS], float c, float r)
     return lo * (1.0f - tr) + hi * tr;
 }
 
-void storm_frame(const storm_t *s, float shift, frame_t *frame)
+void storm_frame(const storm_t *s, frame_t *frame)
 {
     frame_clear(frame);
-    const float hue = fmodf(fmodf(RAIN_HUE + shift, 360.0f) + 360.0f, 360.0f);
-    const color_t rain_color = color_scale(color_from_hue((uint32_t)lrintf(hue)), RAIN_SHARE);
-    const float rain_rgb[3] = {rain_color.r, rain_color.g, rain_color.b};
     /* The bolt flickers as it fades. */
     const float bolt = s->bolt_life * ((s->rng & 0x700) ? 1.0f : 0.3f);
     for (int i = 0; i < LED_COUNT; i++) {
@@ -184,7 +179,7 @@ void storm_frame(const storm_t *s, float shift, frame_t *frame)
         const float b = bolt > 0.0f ? bolt * sample(s->bolt, c, r) : 0.0f;
         float rgb[3], sum = 0.0f;
         for (int ch = 0; ch < 3; ch++) {
-            rgb[ch] = rain * rain_rgb[ch] + b * BOLT_RGB[ch] + s->flash * FLASH_RGB[ch];
+            rgb[ch] = rain * RAIN_RGB[ch] + b * BOLT_RGB[ch] + s->flash * FLASH_RGB[ch];
             sum += rgb[ch];
         }
         const float k = sum > FLUID_LEVEL ? FLUID_LEVEL / sum : 1.0f;

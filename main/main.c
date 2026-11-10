@@ -5,8 +5,8 @@
  * burns upwards in the room, stoked by the sound; rings of light rising
  * level with the floor, one per beat; a night sky fixed in the room; a
  * thunderstorm whose lightning strikes on loud bangs; then the fluid
- * again. A double tap turns the colours round the colour wheel in every
- * mode but the sky.
+ * again. A double tap turns the colours of the fluid, the fire and the
+ * rings round the colour wheel; the sky and the storm keep theirs.
  *
  * Core 0 (this task) reads the IMU, runs the physics and builds frames;
  * core 1 sends them to the LEDs. The RMT send takes ~15 ms per changed
@@ -268,7 +268,7 @@ void app_main(void)
             sky_frame(&sky, &attitude, v3_len(imu.rotation), spectrum_treble(&meter), &frame);
             break;
         case MODE_STORM:
-            storm_frame(&storm, shift, &frame);
+            storm_frame(&storm, &frame);
             break;
         default:
             hat_view_frame(&view, &fluid, hue, brightness, &frame);

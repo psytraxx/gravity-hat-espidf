@@ -68,7 +68,7 @@ static void test_rain_frame(void)
     for (int i = 0; i < 50; i++) {
         storm_step(&s, DOWN);
     }
-    storm_frame(&s, 0.0f, &frame);
+    storm_frame(&s, &frame);
     int lit = 0;
     for (int i = 0; i < LED_COUNT; i++) {
         lit += light(i) > 8;
@@ -78,25 +78,21 @@ static void test_rain_frame(void)
     TEST_ASSERT_LESS_THAN_INT(LED_COUNT / 2, lit);
 }
 
-/* The rain is blue until a double tap turns it: a third of a turn on,
- * it is red. */
+/* The rain is blue. */
 static void test_rain_colour(void)
 {
-    int rgb[2][3] = {{0}};
-    for (int k = 0; k < 2; k++) {
-        storm_init(&s, 4);
-        for (int i = 0; i < 50; i++) {
-            storm_step(&s, DOWN);
-        }
-        storm_frame(&s, k ? 120.0f : 0.0f, &frame);
-        for (int i = 0; i < LED_COUNT; i++) {
-            for (int ch = 0; ch < 3; ch++) {
-                rgb[k][ch] += frame.rgb[3 * i + ch];
-            }
+    int rgb[3] = {0};
+    storm_init(&s, 4);
+    for (int i = 0; i < 50; i++) {
+        storm_step(&s, DOWN);
+    }
+    storm_frame(&s, &frame);
+    for (int i = 0; i < LED_COUNT; i++) {
+        for (int ch = 0; ch < 3; ch++) {
+            rgb[ch] += frame.rgb[3 * i + ch];
         }
     }
-    TEST_ASSERT_GREATER_THAN_INT(rgb[0][0] + rgb[0][1], rgb[0][2]);
-    TEST_ASSERT_GREATER_THAN_INT(rgb[1][1] + rgb[1][2], rgb[1][0]);
+    TEST_ASSERT_GREATER_THAN_INT(rgb[0] + rgb[1], rgb[2]);
 }
 
 /* A bang strikes a bolt from the crown to the brim, which fades within a
