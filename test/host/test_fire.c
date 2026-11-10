@@ -118,8 +118,8 @@ static float heat_round(float z)
     return sum / 32.0f;
 }
 
-/* A beat throws the flames up to the crown within a few steps, and they
- * fall back once it fades. */
+/* A beat throws the flames up near the crown within a fifth of a second,
+ * and they fall back once it fades. */
 static void test_beat_throws_flames_up(void)
 {
     fire_init(&f, 11);
@@ -127,8 +127,8 @@ static void test_beat_throws_flames_up(void)
     run(down, 0.0f, 200);
     const float z = HAT_HEIGHT * 0.85f;
     TEST_ASSERT_LESS_THAN_FLOAT(0.05f, heat_round(z));
-    run(down, 1.0f, 8);
-    TEST_ASSERT_GREATER_THAN_FLOAT(0.3f, heat_round(z));
+    run(down, 1.0f, 12);
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.2f, heat_round(z));
     run(down, 0.0f, 30);
     TEST_ASSERT_LESS_THAN_FLOAT(0.05f, heat_round(z));
 }
@@ -167,11 +167,11 @@ static void test_jolt_fans_the_fire(void)
     run(down, 0.0f, 200);
     const float z = HAT_HEIGHT * 0.85f;
     TEST_ASSERT_LESS_THAN_FLOAT(0.05f, heat_round(z));
-    /* Shaken side to side, 1 g each way, for 8 steps. */
-    for (int i = 0; i < 8; i++) {
+    /* Shaken side to side, 1 g each way, for 12 steps. */
+    for (int i = 0; i < 12; i++) {
         fire_step(&f, v3(i % 2 ? 1.0f : -1.0f, 0.0f, -1.0f), 0.0f);
     }
-    TEST_ASSERT_GREATER_THAN_FLOAT(0.3f, heat_round(z));
+    TEST_ASSERT_GREATER_THAN_FLOAT(0.2f, heat_round(z));
 }
 
 /* Shoved towards +x, the flames lean towards +x at once, into the

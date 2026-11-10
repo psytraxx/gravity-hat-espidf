@@ -20,9 +20,9 @@
  * (as a share of FIRE_RISE) and adds this much fuel, so each beat throws
  * the flames up the hat. */
 #define FIRE_STOKE_KEEP 0.02f
-#define FIRE_STOKE_COOL 0.7f
-#define FIRE_STOKE_RISE 1.5f
-#define FIRE_STOKE_FUEL 0.6f
+#define FIRE_STOKE_COOL 0.5f
+#define FIRE_STOKE_RISE 0.9f
+#define FIRE_STOKE_FUEL 0.4f
 /* Share of a column's fuel flicker replaced by a new random value each
  * step. */
 #define FIRE_FLICKER 0.35f
@@ -38,7 +38,7 @@
 #define FIRE_MAX_G 2.5f
 /* A change in acceleration of this much in g from one step to the next
  * (a jolt, a shake) fans the fire like a full beat. */
-#define FIRE_FAN_G 0.8f
+#define FIRE_FAN_G 1.2f
 /* Heat below this stays dark. */
 #define FIRE_DARK 0.06f
 
