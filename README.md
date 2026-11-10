@@ -487,7 +487,7 @@ streaks. The treble's bars make each star's brightness jitter by up to
 80 %, and about once every 1.5 s a gold shooting star crosses.
 
 **Storm.** 45 drops slide along the wall the way gravity points there
-(the fire's up the other way round), at up to 0.45 cells a step, leaving
+(the fire's up the other way round), at up to 0.3 cells a step, leaving
 a streak on a 40 × 28 grid wrapped round the wall that loses 45 % a
 step. A drop that leaves the wall starts again at the edge the rain
 comes in from, anywhere when the hat lies on its side. A bang is a level

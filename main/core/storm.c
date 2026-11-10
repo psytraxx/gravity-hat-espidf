@@ -10,8 +10,8 @@
 #define ROW_H  (HAT_HEIGHT / STORM_ROWS)
 
 /* Speed of a drop down a vertical wall, in cells per step: about
- * 0.35 m/s at 18 ms. */
-#define RAIN_SPEED 0.45f
+ * 0.23 m/s at 18 ms. */
+#define RAIN_SPEED 0.3f
 /* Share of a streak left after a step. */
 #define RAIN_KEEP 0.55f
 /* Share of the slow average's gap to the level closed each step: about a
