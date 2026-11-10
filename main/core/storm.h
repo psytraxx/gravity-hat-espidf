@@ -10,8 +10,9 @@
  *
  * A bang is a sound more than STORM_BANG_DB louder than its slow average.
  * It strikes a jagged bolt from the edge the rain comes in from to the
- * other, with a branch now and then, and a faint flash over the whole
- * hat; the bolt flickers and fades within about a third of a second.
+ * other, with a branch now and then, and a bright flash over the whole
+ * hat that is gone within about a tenth of a second; the bolt flickers
+ * and fades within about a third of a second.
  * The random numbers come from a seeded generator, so a run repeats. */
 #pragma once
 

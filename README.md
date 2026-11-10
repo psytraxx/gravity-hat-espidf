@@ -497,15 +497,17 @@ streaks. The treble's level makes each star's brightness jitter by up
 to 80 %, and about once every 1.5 s a gold shooting star crosses.
 
 **Storm.** 45 drops slide along the wall the way gravity points there
-(the fire's up the other way round), at up to 0.3 cells a step, leaving
-a streak on a 40 × 28 grid wrapped round the wall that loses 45 % a
-step. The rain is blue and the lightning white. A drop that leaves the
-wall starts again at the edge the rain comes in from, anywhere when the
-hat lies on its side. A bang is a level 15 dB or more over its slow
-average (one second's time constant), at most one every 0.36 s: it
-strikes a jagged bolt along the wall from the edge the rain comes in
-from to the other, with a branch now and then, and a faint flash over
-the whole hat. The bolt flickers and fades within a third of a second.
+(the fire's up the other way round), at up to 0.2 cells a step (about
+0.16 m/s), leaving a streak on a 40 × 28 grid wrapped round the wall
+that loses 45 % a step. The rain is blue and the lightning white. A drop
+that leaves the wall starts again at the edge the rain comes in from,
+anywhere when the hat lies on its side. A bang is a level 15 dB or more
+over its slow average (one second's time constant), at most one every
+0.36 s: it strikes a jagged bolt along the wall from the edge the rain
+comes in from to the other, with a branch now and then, and a bright
+white flash over the whole hat (three quarters of the fluid's power on
+every LED, losing 40 % a frame, so gone within about a tenth of a
+second). The bolt flickers and fades within a third of a second.
 
 **Fluid.** An incompressible FLIP fluid: inviscid Navier-Stokes on a
 staggered grid of 9 × 9 × 7 cells, each 1.4 LED spacings across, about

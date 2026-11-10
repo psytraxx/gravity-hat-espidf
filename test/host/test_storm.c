@@ -119,6 +119,26 @@ static void test_lightning(void)
     TEST_ASSERT_EQUAL_FLOAT(0.0f, s.bolt_life);
 }
 
+/* A bang lights the whole hat brightly for a moment, then the flash is
+ * gone within a tenth of a second. */
+static void test_flash(void)
+{
+    storm_init(&s, 6);
+    storm_hear(&s, -50.0f);
+    storm_hear(&s, -20.0f);
+    storm_step(&s, DOWN);
+    storm_frame(&s, &frame);
+    int lit = 0;
+    for (int i = 0; i < LED_COUNT; i++) {
+        lit += light(i) >= FLUID_LEVEL / 3;
+    }
+    TEST_ASSERT_GREATER_THAN_INT(LED_COUNT * 9 / 10, lit);
+    for (int i = 0; i < 6; i++) {
+        storm_step(&s, DOWN);
+    }
+    TEST_ASSERT_LESS_THAN_FLOAT(0.05f, s.flash);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -127,5 +147,6 @@ int main(void)
     RUN_TEST(test_rain_frame);
     RUN_TEST(test_rain_colour);
     RUN_TEST(test_lightning);
+    RUN_TEST(test_flash);
     return UNITY_END();
 }

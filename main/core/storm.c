@@ -10,21 +10,23 @@
 #define ROW_H  (HAT_HEIGHT / STORM_ROWS)
 
 /* Speed of a drop down a vertical wall, in cells per step: about
- * 0.23 m/s at 18 ms. */
-#define RAIN_SPEED 0.3f
+ * 0.16 m/s at 18 ms. */
+#define RAIN_SPEED 0.2f
 /* Share of a streak left after a step. */
 #define RAIN_KEEP 0.55f
 /* Share of the slow average's gap to the level closed each step: about a
  * second's time constant at 18 ms. */
 #define SLOW_SHARE 0.018f
-/* Bolt and flash fade per step. */
+/* The bolt's fade per step, and the share of the flash left after a step:
+ * the flash lights the whole hat brightly and is gone within about a
+ * tenth of a second. */
 #define BOLT_FADE  0.09f
-#define FLASH_KEEP 0.45f
+#define FLASH_KEEP 0.6f
 /* Colours at full, each adding up to the fluid's power or less: blue
  * rain, a white bolt and flash. */
 static const float RAIN_RGB[3] = {4.0f, 10.0f, 26.0f};
 static const float BOLT_RGB[3] = {18.0f, 18.0f, 24.0f};
-static const float FLASH_RGB[3] = {3.0f, 3.0f, 5.0f};
+static const float FLASH_RGB[3] = {14.0f, 14.0f, 18.0f};
 
 /* Uniform in [0, 1). xorshift32. */
 static float rnd(storm_t *s)
