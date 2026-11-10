@@ -39,7 +39,7 @@ void rings_init(rings_t *r);
 
 /* Advance one step. `gravity` is the way gravity points (hat axes, any
  * length), `pulse` the sound's pulse (0 to 1) and `hue` the loudest
- * band's hue in degrees. */
+ * band's hue in degrees, any number of turns either way. */
 void rings_step(rings_t *r, vec3_t gravity, float pulse, float hue);
 
 void rings_frame(const rings_t *r, frame_t *frame);

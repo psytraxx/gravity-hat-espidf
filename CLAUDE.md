@@ -13,7 +13,7 @@ describes the hardware, wiring and design.
 
 - `main/core/` holds everything that needs no hardware: the hat's
   numbers (`config.h`) and shape (`shape.h`), modes, fluid, fire,
-  spectrum, heading, rings, attitude, sky, storm, frames, LED spiral,
+  spectrum bands, rings, attitude, sky, storm, frames, LED spiral,
   colours, motion filter, tap detector, sound pulse, IMU decoding and
   batching. It must not include ESP-IDF or `sdkconfig.h` headers, so it
   builds on the host.

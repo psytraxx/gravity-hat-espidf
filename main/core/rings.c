@@ -81,7 +81,8 @@ void rings_frame(const rings_t *r, frame_t *frame)
             }
             const float climbed = clampf((r->height[k] - r->low) / span, 0.0f, 1.0f);
             const float a = expf(-d * d) * r->strength[k] * (1.0f - (1.0f - RING_TOP) * climbed);
-            const color_t c = color_from_hue((uint32_t)lrintf(fmaxf(r->hue[k], 0.0f)));
+            const float hue = fmodf(fmodf(r->hue[k], 360.0f) + 360.0f, 360.0f);
+            const color_t c = color_from_hue((uint32_t)lrintf(hue));
             rgb[0] += a * c.r;
             rgb[1] += a * c.g;
             rgb[2] += a * c.b;

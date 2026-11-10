@@ -191,18 +191,36 @@ static void test_shove_leans_the_flames(void)
  * power than the fluid. */
 static void test_colours(void)
 {
-    const color_t cold = fire_color(0.0f);
+    const color_t cold = fire_color(0.0f, 0.0f);
     TEST_ASSERT_EQUAL_UINT8(0, cold.r + cold.g + cold.b);
-    const color_t warm = fire_color(0.4f);
+    const color_t warm = fire_color(0.4f, 0.0f);
     TEST_ASSERT_GREATER_THAN_UINT8(0, warm.r);
     TEST_ASSERT_EQUAL_UINT8(0, warm.g);
-    const color_t hot = fire_color(1.0f);
+    const color_t hot = fire_color(1.0f, 0.0f);
     TEST_ASSERT_GREATER_THAN_UINT8(hot.g, hot.r);
     TEST_ASSERT_GREATER_THAN_UINT8(10, hot.g);
     for (int i = 0; i <= 100; i++) {
-        const color_t c = fire_color(i / 100.0f);
+        const color_t c = fire_color(i / 100.0f, 0.0f);
         TEST_ASSERT_LESS_OR_EQUAL_INT(FLUID_LEVEL, c.r + c.g + c.b);
         TEST_ASSERT_EQUAL_UINT8(0, c.b);
+    }
+}
+
+/* A double tap's shift turns the flames round the colour wheel: a third
+ * of a turn makes them green, a turn back where they were. */
+static void test_shifted_colours(void)
+{
+    const color_t green = fire_color(0.4f, 120.0f);
+    TEST_ASSERT_EQUAL_UINT8(0, green.r);
+    TEST_ASSERT_GREATER_THAN_UINT8(0, green.g);
+    for (int i = 0; i <= 10; i++) {
+        const color_t a = fire_color(i / 10.0f, 0.0f);
+        const color_t b = fire_color(i / 10.0f, -360.0f);
+        TEST_ASSERT_EQUAL_UINT8(a.r, b.r);
+        TEST_ASSERT_EQUAL_UINT8(a.g, b.g);
+        TEST_ASSERT_EQUAL_UINT8(a.b, b.b);
+        const color_t c = fire_color(i / 10.0f, 200.0f);
+        TEST_ASSERT_LESS_OR_EQUAL_INT(FLUID_LEVEL, c.r + c.g + c.b);
     }
 }
 
@@ -212,7 +230,7 @@ static void test_frame_follows_heat(void)
     fire_init(&f, 7);
     run(v3(0.0f, 0.0f, -1.0f), 0.0f, 100);
     static frame_t frame;
-    fire_frame(&f, &frame);
+    fire_frame(&f, 0.0f, &frame);
     int lit_low = 0, lit_high = 0;
     for (int i = 0; i < LED_COUNT; i++) {
         const int sum = frame.rgb[3 * i] + frame.rgb[3 * i + 1] + frame.rgb[3 * i + 2];
@@ -241,6 +259,7 @@ int main(void)
     RUN_TEST(test_jolt_fans_the_fire);
     RUN_TEST(test_shove_leans_the_flames);
     RUN_TEST(test_colours);
+    RUN_TEST(test_shifted_colours);
     RUN_TEST(test_frame_follows_heat);
     return UNITY_END();
 }

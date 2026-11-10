@@ -4,9 +4,9 @@
  * Each step the gyro's rotation turns it; then it is pulled a little
  * towards the measured gravity, so the room's up stays up however long
  * it runs. The heading round the room's up has nothing to correct it, so
- * it drifts by the gyro's leftover zero offset, as heading.h does. The
- * room's x axis is where the hat's x axis (LED 0's side) pointed, level,
- * when it started. */
+ * it drifts by the gyro's leftover zero offset: a fraction of a degree a
+ * second after the start-up calibration. The room's x axis is where the
+ * hat's x axis (LED 0's side) pointed, level, when it started. */
 #pragma once
 
 #include <stdbool.h>

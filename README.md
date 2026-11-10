@@ -1,66 +1,81 @@
 # Gravity hat (ESP-IDF)
 
 Firmware for a hat of light: a WS2812B strip wound in a spiral round a
-hat's crown shows a liquid inside it. Tilt the hat and the surface
-tilts; shake it and the fluid sloshes; lay it on its
-side and the fluid runs along the low side. Its brightness pulses with
-the sound around it, and a double tap gives the fluid a new, random
-colour.
+hat's crown shows a liquid inside it, flames, rings of sound, a night
+sky or a thunderstorm, all following the hat's motion and the sound
+around it.
 
-Hold the hat upside down for two seconds and it changes mode:
+It runs on an ESP32-WROOM-32 with an MPU-6500 IMU and an I2S
+microphone, and is written in C for ESP-IDF 6.1. The physics is a port
+of the fluid solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
 
-| Mode | |
-|---|---|
-| Fluid | The liquid in the hat |
-| Fire | Flames that always burn upwards in the room, whichever way the hat is tilted; each beat and each jolt throws them up the hat, and in free fall they stall |
-| Spectrum | The sound's spectrum as 12 bars round the hat, bass to treble, fixed in the room: turn your head and the bars stay where they are while the hat turns under them |
-| Rings | Each beat sends a ring of light up the hat in the colour of the loudest band, always level with the floor |
-| Sky | Stars, the moon and now and then a shooting star, fixed in the room; a quick spin smears them into streaks, treble makes them twinkle |
-| Storm | Rain running down the room over the hat's wall, slanting as it tilts; a loud bang strikes lightning |
+## Modes
 
-A white arc grows round the brim while the hat is held upside down, and
-the next mode comes on when it closes. Turn the hat back the right way
-up before the next change; after the last mode comes the fluid again.
+Hold the hat upside down for two seconds and it moves on to the next
+mode: fluid, fire, rings, sky, storm, then the fluid again. A white arc
+grows round the brim while the hat is held upside down, and the next
+mode comes on when it closes; turn the hat back the right way up before
+the next change.
+
+A double tap turns the colours round the colour wheel, by at least 60°
+each time, in every mode but the sky: the fluid takes a new hue, and the
+fire, the rings and the rain turn their own colours as far round.
 
 ![The fluid sloshing, the hat held upside down until the arc closes, then
 fire leaning as the hat tilts, lies on its side and tips
 over](docs/modes-fire.gif)
 
-*Rendered from the firmware's core code on a computer, over a scripted
-set of tilts and a beat for the sound: the hat on the left, the strip
-unrolled on the right.*
+The animations here are rendered on a computer from the firmware's own
+core code, over scripted motion and sound: the hat on the left, the
+strip unrolled on the right.
+
+### Fluid
+
+A liquid fills the bottom half of the hat. Tilt the hat and the surface
+tilts; shake it and the fluid sloshes; lay it on its side and it runs
+along the low side. Its brightness pulses with the sound.
+
+![The fluid tilting with the hat and running along the low side, its
+colour changing on two double taps](docs/fluid.gif)
+
+### Fire
+
+Flames that always burn upwards in the room, whichever way the hat is
+tilted: they lean round a tilted hat and burn from the crown when it is
+upside down. Each beat and each jolt throws them up the hat; pressed
+upwards they shoot higher, and in free fall they stall.
 
 ![Fire in the quiet, then leaping up the hat on every beat, flaring when
-shaken, leaning into a shove, hanging in free fall after a jump, and
-tilted to the beat](docs/fire-motion.gif)
+shaken, leaning into a shove, hanging in free fall after a jump, tilted
+to the beat, and turned blue by a double tap](docs/fire-motion.gif)
 
-*The fire to a beat and to the hat's motion, rendered the same way.*
+### Rings
 
-![The spectrum's bars standing still in the room while the hat turns
-left and right, nods and spins round under them](docs/spectrum.gif)
-
-*The spectrum mode to music, rendered the same way: as the hat turns,
-the bars keep their place on the left, and on the unrolled strip they
-move round the other way.*
+Each beat sends a ring of light up the hat in the colour of the loudest
+frequency band, always level with the floor however the hat is tilted.
 
 ![Rings rising up the hat on every beat, staying level with the floor
-while the hat tilts and rolls](docs/rings.gif)
+while the hat tilts and rolls, their colours turned by a double
+tap](docs/rings.gif)
 
-*Rings to music.*
+### Sky
+
+Stars, the moon and now and then a shooting star, fixed in the room:
+turn, tilt or nod and the sky stays where it is while the hat moves
+under it. A quick spin smears the stars into streaks, and treble makes
+them twinkle. The sky keeps its own colours.
 
 ![Stars and the moon standing still while the hat turns, smearing into
 streaks on a fast spin, and twinkling to the treble](docs/sky.gif)
 
-*The night sky as the hat turns, spins, nods and hears music.*
+### Storm
 
-![Rain running down the hat's wall, lightning on loud bangs, and the rain
-slanting across the wall as the hat tilts](docs/storm.gif)
+Rain running down the room over the hat's wall, slanting across it as
+the hat tilts; a loud bang strikes lightning from the crown to the brim.
 
-*The storm, with bangs at 2, 4.2, 4.5, 7.5, 11 and 15 s.*
-
-It runs on an ESP32-WROOM-32 with an MPU-6500 IMU and an I2S
-microphone, and is written in C for ESP-IDF 6.1. The physics is a port
-of the fluid solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cube-rs).
+![Rain running down the hat's wall, lightning on loud bangs, the rain
+slanting as the hat tilts and turning colour on a double
+tap](docs/storm.gif)
 
 ## Hardware
 
@@ -69,7 +84,7 @@ of the fluid solver in [gravity-cube-rs](https://github.com/psytraxx/gravity-cub
 | ESP32-WROOM-32 board | 4 MB flash |
 | MPU-92/65 board | MPU-6500 (chip marked MP65), 3–5 V supply (on-board regulator), wired for SPI |
 | WS2812B strip, 500 LEDs | Wound clockwise (seen from above) in a spiral of about 13 turns from the bottom up: 39 LEDs a turn at the bottom, 36.8 at the top, as the crown narrows |
-| I2S microphone (e.g. INMP441) | On GPIO 32, 33 and 25; its sound pulses the brightness |
+| I2S microphone (e.g. INMP441) | On GPIO 32, 33 and 25; the modes follow its sound |
 | 330 Ω resistor | In series with the data line, at the strip's input |
 | 1000 µF capacitor or more | Across 5 V and GND at the strip's input (10 V or more) |
 | 1N5819 Schottky diode | From the 5 V supply to the board's 5V pin, so USB cannot feed the strip or the supply |
@@ -313,7 +328,7 @@ Without a token, anyone on the network hat reflash the hat.
 | Tap threshold | 1000 mg | Raise it if sloshing changes the colour, lower it if taps are missed |
 | IMU SPI pins | 23, 19, 18, 5 | MOSI, MISO, SCLK, CS |
 | IMU rotation | 90° | Where LED 0's side lies seen from the IMU board's X arrow, counter-clockwise; see [Setting up a hat](#setting-up-a-hat) |
-| Pulse the brightness with the sound | on | Reads the I2S microphone |
+| Listen to the sound | on | Reads the I2S microphone: the fluid's brightness, the fire, rings, stars and lightning follow it |
 | Microphone pins | 32, 33, 25 | SD, SCK, WS |
 | Brightness in the quiet | 25 % | Loud sounds pulse it up to full |
 | Wi-Fi SSID, password | empty | Network for updates over Wi-Fi; an empty SSID turns Wi-Fi off |
@@ -329,18 +344,15 @@ The strip's geometry and the fluid's colour are in
 flowchart LR
     IMU[MPU-6500 FIFO<br/>250 Hz] --> TAP[tap detector]
     IMU --> MF[motion filter]
-    TAP -->|double tap: random hue| FB
+    TAP -->|double tap: colours round the wheel| FB
     MIC[I2S microphone<br/>core 1, 16 kHz] -->|loudness| PULSE[pulse tracker]
     MIC -->|FFT, 12 bands| METER[spectrum meter]
-    METER --> FB
-    MF -->|gravity| HEAD[heading]
-    IMU -->|gyro| HEAD
-    HEAD -->|bars fixed in the room| FB
+    METER -->|treble| ATT
     MF -->|gravity| ATT[attitude]
     IMU -->|gyro| ATT
     ATT -->|stars fixed in the room| FB
     PULSE -->|beats| RINGS[rings]
-    METER -->|loudest band, treble| RINGS
+    METER -->|loudest band| RINGS
     MF -->|room's up| RINGS
     RINGS --> FB
     PULSE -->|bangs| STORM[rain and lightning]
@@ -355,7 +367,7 @@ flowchart LR
     MF -->|room's up| FIRE[fire step]
     PULSE -->|stoke| FIRE
     FIRE --> FB
-    FX --> FB[frame builder:<br/>density, heat or bars behind each LED]
+    FX --> FB[frame builder:<br/>density, heat, rings, stars or rain behind each LED]
     FB -->|queue| LED[LED task<br/>core 1, led_strip]
 ```
 
@@ -382,8 +394,12 @@ are found in software on the raw samples: a jump of more than the
 threshold between two samples, after at least 30 ms of stillness, counts
 as a tap; a second tap within 375 ms picks a random hue at least 60°
 from the current one. Shaking never has the stillness, so it does not
-change the colour. Every hue's channels add up to 60/255, so the strip
-draws the same current in any colour.
+change the colour. The fluid takes the new hue; the fire, the rings and
+the rain turn their own colours as far round the wheel as the fluid's
+has turned from its green at power on, so the fire starts red, orange
+and yellow and the rain blue. The sky keeps its own colours. Every
+hue's channels add up to 60/255, so the strip draws the same current in
+any colour.
 
 **Sound.** A task on core 1 reads the microphone at 16 kHz (24-bit
 samples in 32-bit slots, both slots, so the L/R pin may go either way)
@@ -431,8 +447,9 @@ full beat) stokes the fire: more fuel, gas rising up to 1.9 times as
 fast, and up to 50 % less random cooling. Quiet flames reach about a
 quarter of the way up; a beat lifts them to about nine tenths of the
 hat within about 0.2 s, and they fall back before the next one at
-120 bpm. Heat runs from dark through deep red to orange and yellow, at
-no more than the fluid's 60/255 a LED.
+120 bpm. Heat runs from dark through deep red to orange and yellow (the
+hue turning 54° from the coolest to the hottest flames), at no more than
+the fluid's 60/255 a LED.
 
 **Spectrum.** The microphone task keeps the latest 512 samples (32 ms)
 and, for every 20 ms it reads, takes their FFT through a Hann window and
@@ -440,32 +457,19 @@ sums the power into 12 bands spaced evenly in pitch from 60 Hz to
 7 kHz. Each band has its own floor, the quiet in that band, which drops
 at once and creeps up 3 dB a second, so a hum or the steady bass under
 music sinks back; the loudest band over its floor sets one shared peak,
-which jumps up and sinks 6 dB a second. A bar jumps to its band's place
-between floor and peak and falls 1.5 hat heights a second; a white mark
-holds its highest point for 0.4 s, then falls too. The bars stand round
-the hat in rainbow order, red bass to violet treble, counter-clockwise
-seen from above. The spiral's LEDs do not sit above each other from one
-turn to the next, so each LED lights by how much of its width falls in
-a bar (squared, for the eye), and its top LED by how much of its row the
-bar fills: on every turn the light is centred on the bar's angle, and
-the bars stand straight and rise smoothly.
-
-They are fixed in the room by the hat's heading: each frame, the part
-of the gyro's rotation about the room's up (against the motion filter's
-gravity) is added up, so turning round moves the heading and tilting or
-nodding does not. The bars are drawn that far back round the hat, so
-the bass stays where LED 0 faced at power on. Nothing corrects the
-heading, so it drifts by the gyro's leftover zero offset, a fraction of
-a degree a second. The bottom turn of every bar always glows dimly in
-its colour, so the mode shows in silence, and without a microphone the
-hat shows just that ring.
+which jumps up and sinks 6 dB a second. Each band's level runs from 0
+at its floor to 1 at the peak, jumps up at once and falls 1.5 a second.
+The rings take the hue of the loudest band (red for the bass to violet
+for the treble), and the stars twinkle with the top quarter of the
+bands.
 
 **Rings.** A beat is the sound's pulse jumping a quarter or more above
 its lowest point since the last beat, at most one every 0.15 s: loud
 music never lets the pulse fall far, but each beat still jumps out of
 it. A beat starts a ring at the hat's lowest point in the room, in the
-colour of the spectrum band standing highest at that moment, as strong
-as the pulse. Each LED lights by how close its height in the room (its
+colour of the loudest spectrum band at that moment, turned as far round
+the wheel as the double taps have turned the fluid, and as strong as the
+pulse. Each LED lights by how close its height in the room (its
 place on the wall, along the motion filter's up) is to each ring, so the
 rings stay level whichever way the hat is tilted. A ring rises 0.12 to
 0.24 cells a step, louder ones faster and thicker, dims to a third as it
@@ -475,21 +479,22 @@ to no more than the fluid's power on any LED.
 **Sky.** The attitude tracks how the hat lies in the room as a
 quaternion: the gyro turns it every frame, and each frame it is pulled
 4 % of the way towards the motion filter's gravity, so up stays up. The
-heading has nothing to correct it, as for the spectrum, so it drifts by
-the gyro's leftover zero offset. 38 stars (placed by a seeded generator)
+heading round the room's up has nothing to correct it, so it drifts by
+the gyro's leftover zero offset, a fraction of a degree a second. 38 stars (placed by a seeded generator)
 and a moon sit at fixed directions; each LED looks out from the hat's
 middle through its place on the wall, turned into the room by the
 attitude, and lights as that direction nears a star (about 3° across)
 or the moon (about 13°). Each LED keeps an afterglow that loses 70 % a
 frame when the hat is still and only 18 % when it turns faster than
 about 1.7 turns a second, so a quick spin smears the stars into
-streaks. The treble's bars make each star's brightness jitter by up to
-80 %, and about once every 1.5 s a gold shooting star crosses.
+streaks. The treble's level makes each star's brightness jitter by up
+to 80 %, and about once every 1.5 s a gold shooting star crosses.
 
 **Storm.** 45 drops slide along the wall the way gravity points there
 (the fire's up the other way round), at up to 0.3 cells a step, leaving
 a streak on a 40 × 28 grid wrapped round the wall that loses 45 % a
-step. A drop that leaves the wall starts again at the edge the rain
+step. The rain is blue (hue 215°) at two thirds of the fluid's power,
+turned round the wheel by double taps; the lightning is white. A drop that leaves the wall starts again at the edge the rain
 comes in from, anywhere when the hat lies on its side. A bang is a level
 15 dB or more over its slow average (one second's time constant), at
 most one every 0.36 s: it strikes a jagged bolt along the wall from the
@@ -538,7 +543,7 @@ than steps.
 | `main/mpu6500.c` | MPU-6500 over SPI: setup, gyro calibration, FIFO reads |
 | `main/mic.c` | I2S microphone on core 1: the loudness of the latest 20 ms and the spectrum of the latest 32 ms |
 | `main/ws2812.c` | The strip through the `espressif/led_strip` component (RMT) |
-| `main/core/` | Everything that needs no hardware: the hat's numbers (`config.h`) and shape (`shape.h`), modes and the switch between them, fluid, fire, spectrum and heading, rings, attitude and sky, storm, frames, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding and batching |
+| `main/core/` | Everything that needs no hardware: the hat's numbers (`config.h`) and shape (`shape.h`), modes and the switch between them, fluid, fire, spectrum bands, rings, attitude and sky, storm, frames, LED spiral and calibration picture, colours, motion filter, tap detector, sound pulse, IMU sample decoding and batching |
 | `test/host/` | Unity tests for `main/core`, run on the host |
 
 ## Tests

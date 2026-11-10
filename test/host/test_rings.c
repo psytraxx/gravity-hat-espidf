@@ -96,6 +96,26 @@ static void test_ring_is_level(void)
     TEST_ASSERT_GREATER_THAN_FLOAT(HAT_HEIGHT / 2, zmax - zmin);
 }
 
+/* A hue turned past a whole turn either way is the same colour. */
+static void test_hue_wraps(void)
+{
+    int green[2];
+    for (int k = 0; k < 2; k++) {
+        rings_init(&r);
+        rings_step(&r, DOWN, 1.0f, k ? 120.0f - 720.0f : 120.0f + 360.0f);
+        for (int i = 0; i < 4; i++) {
+            rings_step(&r, DOWN, 1.0f, 0.0f);
+        }
+        rings_frame(&r, &frame);
+        green[k] = 0;
+        for (int i = 0; i < LED_COUNT; i++) {
+            green[k] += frame.rgb[3 * i + 1] - frame.rgb[3 * i] - frame.rgb[3 * i + 2];
+        }
+    }
+    TEST_ASSERT_GREATER_THAN_INT(100, green[0]);
+    TEST_ASSERT_EQUAL_INT(green[0], green[1]);
+}
+
 /* A held loud sound is one beat; it has to drop before the next. */
 static void test_one_ring_per_beat(void)
 {
@@ -158,6 +178,7 @@ int main(void)
     RUN_TEST(test_quiet_is_dark);
     RUN_TEST(test_beat_ring_rises);
     RUN_TEST(test_ring_is_level);
+    RUN_TEST(test_hue_wraps);
     RUN_TEST(test_one_ring_per_beat);
     RUN_TEST(test_beats_over_loud_music);
     RUN_TEST(test_power);

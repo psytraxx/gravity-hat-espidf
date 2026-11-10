@@ -65,9 +65,12 @@ void fire_step(fire_t *f, vec3_t accel, float stoke);
  * above) and height `z` (cells), blended from the nearest grid points. */
 float fire_heat_at(const fire_t *f, float a, float z);
 
-/* Colour of heat `h` (0 to 1): dark, deep red, orange, yellow. Its
- * channels never add up to more than FLUID_LEVEL, the fluid's power. */
-color_t fire_color(float h);
+/* Colour of heat `h` (0 to 1): dark, deep red, orange, yellow, each
+ * turned `shift` degrees round the colour wheel (a double tap's change of
+ * hue). Its channels never add up to more than FLUID_LEVEL, the fluid's
+ * power. */
+color_t fire_color(float h, float shift);
 
-/* Light every LED with the heat behind it. */
-void fire_frame(const fire_t *f, frame_t *frame);
+/* Light every LED with the heat behind it, its colours turned `shift`
+ * degrees. */
+void fire_frame(const fire_t *f, float shift, frame_t *frame);

@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "color.h"
 #include "hat.h"
 #include "shape.h"
 
@@ -193,27 +194,35 @@ float fire_heat_at(const fire_t *f, float a, float z)
     return sample(f, a / TWO_PI * FIRE_COLS, y, 0.0f);
 }
 
-color_t fire_color(float h)
+/* Hue the hottest heat turns to, past the base hue: red to yellow. */
+#define FIRE_HOT_HUE 54.0f
+
+color_t fire_color(float h, float shift)
 {
     h = clampf(h, 0.0f, 1.0f);
     if (h < FIRE_DARK) {
         return (color_t){0, 0, 0};
     }
-    /* Red rises to full power by half heat; past it, green takes over a
-     * share of the same power, from red to orange to yellow. */
-    const float level = FLUID_LEVEL;
+    /* The base hue (red, unshifted) rises to full power by half heat;
+     * past it, the hue turns towards FIRE_HOT_HUE further on: from red to
+     * orange to yellow. */
+    float hue = shift;
+    float level = 1.0f;
     if (h < 0.5f) {
         const float t = (h - FIRE_DARK) / (0.5f - FIRE_DARK);
-        return (color_t){(uint8_t)(level * (0.08f + 0.92f * t * t) + 0.5f), 0, 0};
+        level = 0.08f + 0.92f * t * t;
+    } else {
+        hue += FIRE_HOT_HUE * (h - 0.5f) / 0.5f;
     }
-    const uint8_t g = (uint8_t)(level * 0.45f * (h - 0.5f) / 0.5f + 0.5f);
-    return (color_t){(uint8_t)(FLUID_LEVEL - g), g, 0};
+    const float wrapped = fmodf(fmodf(hue, 360.0f) + 360.0f, 360.0f);
+    return color_scale(color_from_hue((uint32_t)lrintf(wrapped)), level);
 }
 
-void fire_frame(const fire_t *f, frame_t *frame)
+void fire_frame(const fire_t *f, float shift, frame_t *frame)
 {
     frame_clear(frame);
     for (int i = 0; i < LED_COUNT; i++) {
-        frame_set_led(frame, i, fire_color(fire_heat_at(f, hat_led_angle(i), hat_led_height(i))));
+        const float h = fire_heat_at(f, hat_led_angle(i), hat_led_height(i));
+        frame_set_led(frame, i, fire_color(h, shift));
     }
 }

@@ -2,11 +2,11 @@
  * spiral, shows the liquid inside. Tilt it and the surface tilts; shake
  * it and the fluid sloshes; its brightness pulses with the sound. Held
  * upside down for two seconds, it moves on to the next mode: fire that
- * burns upwards in the room, stoked by the sound; the sound's spectrum
- * standing round the hat, fixed in the room as the hat turns; rings of
- * light rising level with the floor, one per beat; a night sky fixed in
- * the room; a thunderstorm whose lightning strikes on loud bangs; then
- * the fluid again.
+ * burns upwards in the room, stoked by the sound; rings of light rising
+ * level with the floor, one per beat; a night sky fixed in the room; a
+ * thunderstorm whose lightning strikes on loud bangs; then the fluid
+ * again. A double tap turns the colours round the colour wheel in every
+ * mode but the sky.
  *
  * Core 0 (this task) reads the IMU, runs the physics and builds frames;
  * core 1 sends them to the LEDs. The RMT send takes ~15 ms per changed
@@ -23,7 +23,6 @@
 #include "esp_timer.h"
 #include "fire.h"
 #include "fluid.h"
-#include "heading.h"
 #include "imu.h"
 #include "mode.h"
 #include "freertos/FreeRTOS.h"
@@ -146,14 +145,14 @@ void app_main(void)
     fluid_init(&fluid);
     fluid_populate(&fluid);
     ESP_LOGI(TAG, "%d fluid particles; double-tap the hat to change colour", fluid.n);
+    /* The fluid's hue; the other modes turn their own colours as far
+     * round the wheel as the fluid's has turned from FLUID_HUE. */
     uint32_t hue = FLUID_HUE;
 
     static fire_t fire;
     fire_init(&fire, esp_random() | 1u);
     spectrum_meter_t meter;
     spectrum_meter_init(&meter);
-    heading_t heading;
-    heading_init(&heading);
     attitude_t attitude;
     attitude_init(&attitude);
     static rings_t rings;
@@ -219,8 +218,7 @@ void app_main(void)
             brightness = audio_brightness(&audio);
         }
 #if CONFIG_HAT_MIC
-        /* The spectrum shows in its own mode, colours the rings and
-         * twinkles the stars. */
+        /* The spectrum colours the rings and twinkles the stars. */
         {
             float bands[SPECTRUM_BANDS];
             if (mic_bands(bands)) {
@@ -232,21 +230,22 @@ void app_main(void)
             ESP_LOGI(TAG, "Bang: lightning");
         }
 
+        const float shift = (float)hue - FLUID_HUE;
+
         /* Only the mode on show runs; the fluid waits where it is while
          * the fire burns, stoked by the sound. */
         const int64_t start = esp_timer_get_time();
         const vec3_t accel = motion_filter_apply(&motion, imu.accel, imu.rotation);
-        heading_feed(&heading, imu.rotation, motion.gravity);
         attitude_feed(&attitude, imu.rotation, motion.gravity);
         switch (modes.mode) {
         case MODE_FIRE:
             fire_step(&fire, accel, pulse);
             break;
-        case MODE_SPECTRUM:
         case MODE_SKY:
             break;
         case MODE_RINGS:
-            rings_step(&rings, motion.gravity, pulse, spectrum_band_hue(spectrum_loudest(&meter)));
+            rings_step(&rings, motion.gravity, pulse,
+                       spectrum_band_hue(spectrum_loudest(&meter)) + shift);
             break;
         case MODE_STORM:
             storm_step(&storm, motion.gravity);
@@ -260,10 +259,7 @@ void app_main(void)
 
         switch (modes.mode) {
         case MODE_FIRE:
-            fire_frame(&fire, &frame);
-            break;
-        case MODE_SPECTRUM:
-            spectrum_frame(&meter, heading.yaw, &frame);
+            fire_frame(&fire, shift, &frame);
             break;
         case MODE_RINGS:
             rings_frame(&rings, &frame);
@@ -272,7 +268,7 @@ void app_main(void)
             sky_frame(&sky, &attitude, v3_len(imu.rotation), spectrum_treble(&meter), &frame);
             break;
         case MODE_STORM:
-            storm_frame(&storm, &frame);
+            storm_frame(&storm, shift, &frame);
             break;
         default:
             hat_view_frame(&view, &fluid, hue, brightness, &frame);
