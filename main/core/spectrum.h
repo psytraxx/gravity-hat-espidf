@@ -56,3 +56,13 @@ void spectrum_meter_feed(spectrum_meter_t *m, const float db[SPECTRUM_BANDS], fl
  * turned in the room (heading.h); the bars stay where they are while the
  * hat turns under them, with the bass where LED 0 faced at yaw 0. */
 void spectrum_frame(const spectrum_meter_t *m, float yaw, frame_t *frame);
+
+/* Band `b`'s colour in degrees of hue: red for the bass to violet for
+ * the treble. */
+float spectrum_band_hue(int b);
+
+/* The band whose bar stands highest. */
+int spectrum_loudest(const spectrum_meter_t *m);
+
+/* Mean bar height of the top quarter of the bands, 0 to 1. */
+float spectrum_treble(const spectrum_meter_t *m);

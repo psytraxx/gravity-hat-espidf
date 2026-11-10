@@ -38,6 +38,12 @@ const char *mode_name(hat_mode_t mode)
         return "fire";
     case MODE_SPECTRUM:
         return "spectrum";
+    case MODE_RINGS:
+        return "rings";
+    case MODE_SKY:
+        return "sky";
+    case MODE_STORM:
+        return "storm";
     default:
         return "?";
     }

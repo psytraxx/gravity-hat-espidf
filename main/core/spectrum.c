@@ -176,6 +176,32 @@ static float overlap(float lo, float hi, float half)
     return in > 0.0f ? in / (hi - lo) : 0.0f;
 }
 
+float spectrum_band_hue(int b)
+{
+    return HUE_LOW + (HUE_HIGH - HUE_LOW) * b / (SPECTRUM_BANDS - 1);
+}
+
+int spectrum_loudest(const spectrum_meter_t *m)
+{
+    int best = 0;
+    for (int b = 1; b < SPECTRUM_BANDS; b++) {
+        if (m->bar[b] > m->bar[best]) {
+            best = b;
+        }
+    }
+    return best;
+}
+
+float spectrum_treble(const spectrum_meter_t *m)
+{
+    const int first = SPECTRUM_BANDS - SPECTRUM_BANDS / 4;
+    float sum = 0.0f;
+    for (int b = first; b < SPECTRUM_BANDS; b++) {
+        sum += m->bar[b];
+    }
+    return sum / (SPECTRUM_BANDS - first);
+}
+
 void spectrum_frame(const spectrum_meter_t *m, float yaw, frame_t *frame)
 {
     frame_clear(frame);
@@ -220,8 +246,7 @@ void spectrum_frame(const spectrum_meter_t *m, float yaw, frame_t *frame)
             const float mark =
                 m->mark[b] > row ? clampf(1.0f - fabsf(up - m->mark[b]) / row, 0.0f, 1.0f) : 0.0f;
             const float weight = powf(across, COVERAGE_GAMMA);
-            const float hue = HUE_LOW + (HUE_HIGH - HUE_LOW) * b / (SPECTRUM_BANDS - 1);
-            const color_t c = color_from_hue((uint32_t)lrintf(hue));
+            const color_t c = color_from_hue((uint32_t)lrintf(spectrum_band_hue(b)));
             const float lit = fill * (1.0f - mark);
             rgb[0] += weight * (c.r * lit + MARK_LEVEL * mark);
             rgb[1] += weight * (c.g * lit + MARK_LEVEL * mark);

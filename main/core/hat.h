@@ -29,6 +29,10 @@ float hat_led_height(int led);
 /* Where LED `led` sits on the hat's wall, in grid coordinates. */
 vec3_t hat_led_pos(int led);
 
+/* Where LED `led` sits relative to the middle of the hat (on its axis,
+ * half way up), in cells. */
+vec3_t hat_led_offset(int led);
+
 /* The LED index, not rounded, `t` turns on from LED 0. */
 float hat_led_at_turns(float t);
 
